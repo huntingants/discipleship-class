@@ -1020,15 +1020,62 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       if (sig() !== before && parseRoute().k !== "tr") requestRender();
     } catch (e) { if (isNet(e)) S.offline = true; }
     S.refreshing = false;
+    if (!live || live.cid !== S.classId) startLive(); /* joined, left or switched class: listen to the right one */
   }
   function startPoll() {
     stopPoll();
     S.poll = setInterval(function () {
-      var every = S.settings && S.settings.checkin ? 9000 : 25000;
+      /* live updates do the work while connected; this slow check is the backup */
+      var every = S.live ? 120000 : S.settings && S.settings.checkin ? 9000 : 25000;
       if (Date.now() - (S.lastRef || 0) >= every - 500) refresh();
     }, 3000);
   }
-  function stopPoll() { clearInterval(S.poll); }
+  function stopPoll() { clearInterval(S.poll); stopLive(); }
+
+  /* ---------- live updates (Supabase Realtime) ----------
+     One channel per class. A change to the class, its people, prayers, attendance, shared journals or notes
+     triggers a refresh a moment later. The database only sends changes to rows this person may read. */
+  var live = null, liveT = 0;
+  function liveBump(rec) {
+    rec = rec || {};
+    if (rec.user_id === S.uid || (rec.id === S.uid && rec.role)) return; /* our own save coming back */
+    clearTimeout(liveT);
+    liveT = setTimeout(function again() {
+      if (S.refreshing) { liveT = setTimeout(again, 700); return; }
+      refresh(true);
+    }, 1200);
+  }
+  function startLive() {
+    stopLive();
+    if (!sb || !S.session || !S.classId || !sb.channel) return;
+    var cid = S.classId, ch;
+    try {
+      if (sb.realtime && sb.realtime.setAuth) sb.realtime.setAuth(S.session.access_token);
+      ch = sb.channel("class-" + cid);
+      var on = function (table, filter) {
+        var opt = { event: "*", schema: "public", table: table }; if (filter) opt.filter = filter;
+        ch.on("postgres_changes", opt, function (p) {
+          /* rows this person may not read arrive as an empty notice marked "Unauthorized": ignore those */
+          if (!p || (p.errors && p.errors.length)) return;
+          liveBump(p.new && Object.keys(p.new).length ? p.new : p.old);
+        });
+      };
+      on("classes", "id=eq." + cid);
+      ["profiles", "prayers", "attendance", "manual_students", "student_notes"].forEach(function (t) { on(t, "class_id=eq." + cid); });
+      /* these have no class column to filter on; students only need the "I prayed" counts */
+      (S.isTeacher ? ["prayed", "journal", "prep"] : ["prayed"]).forEach(function (t) { on(t); });
+      ch.subscribe(function (status) {
+        var was = S.live; S.live = status === "SUBSCRIBED";
+        if (S.live && !was) refresh(true); /* catch anything missed while connecting */
+      });
+      live = { ch: ch, cid: cid };
+    } catch (e) { live = null; S.live = false; }
+  }
+  function stopLive() {
+    clearTimeout(liveT);
+    if (live) { try { sb.removeChannel(live.ch); } catch (e) {} live = null; }
+    S.live = false;
+  }
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden && S.session) { refresh(true); sb.from("profiles").update({ last_seen: iso() }).eq("id", S.uid).then(function () {}, function () {}); }
   });
@@ -1070,7 +1117,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (S.settings === undefined) S.settings = null;
     if (!MAT.lessons) { try { await loadMat(MAT.id); setMaterial(MAT.id); } catch (x) {} }
     S.draft.name = S.me.name || ""; S.draft.set = null;
-    startPoll(); checkPush();
+    startPoll(); startLive(); checkPush();
   }
   function enter(session) {
     if (S.entering) return S.entering;
