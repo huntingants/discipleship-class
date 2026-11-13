@@ -1070,7 +1070,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (S.settings === undefined) S.settings = null;
     if (!MAT.lessons) { try { await loadMat(MAT.id); setMaterial(MAT.id); } catch (x) {} }
     S.draft.name = S.me.name || ""; S.draft.set = null;
-    startPoll();
+    startPoll(); checkPush();
   }
   function enter(session) {
     if (S.entering) return S.entering;
@@ -1436,13 +1436,52 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += others.length ? '<div class="card">' + others.map(function (o) { return prayItem(o.p, false, o.who); }).join("") + "</div>" : '<p class="small">Nothing shared yet. When classmates share a request, it shows up here so you can pray for them.</p>';
     return h;
   }
+  /* ---------- push notifications (students turn them on; teachers' actions send them) ---------- */
+  S.push = { on: false, busy: false };
+  function pushSupported() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!CFG.push; }
+  function b64u(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  function pushSave(sub) {
+    var j = sub.toJSON();
+    return sb.rpc("save_push_sub", { p_endpoint: j.endpoint, p_key: j.keys.p256dh, p_auth: j.keys.auth }).then(ck);
+  }
+  /* on sign-in: see whether this phone already has notifications on, and make sure they go to whoever is signed in */
+  function checkPush() {
+    if (!pushSupported() || S.isTeacher || !S.session) return;
+    navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      S.push.on = !!sub && Notification.permission === "granted";
+      if (S.push.on) pushSave(sub).catch(function () {});
+      requestRender();
+    }).catch(function () {});
+  }
+  /* on sign-out: stop this phone getting the class's notifications */
+  function pushOffHere() {
+    if (!pushSupported()) return Promise.resolve();
+    return navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (!sub) return;
+      return sb.rpc("remove_push_sub", { p_endpoint: sub.endpoint }).then(function () {}, function () {}).then(function () { return sub.unsubscribe(); });
+    }).catch(function () {});
+  }
+  /* teacher side: tell the class's phones; the server writes the text from what is saved */
+  function notifyClass(kind) {
+    if (!sb || !S.isTeacher || S.offline) return;
+    sb.functions.invoke("notify", { body: { kind: kind } }).then(function (r) {
+      var n = r && r.data && r.data.sent;
+      if (n) setTimeout(function () { toast(n === 1 ? "1 phone was notified." : n + " phones were notified."); }, 1600);
+    }, function () {});
+  }
   function reminderCard() {
-    if (!("Notification" in window)) return "";
-    var on = store("dc_remind") === "1";
-    var perm = Notification.permission;
-    if (perm === "denied") return '<div class="card"><span class="k">Weekly reminders</span><p class="small" style="margin:0">Notifications are blocked. Open your browser settings to allow them.</p></div>';
-    return '<div class="card"><span class="k">Weekly reminders</span><p class="small" style="margin:0">Get a gentle nudge when you haven\'t opened the app in a week.</p>' +
-      '<label class="chk" style="margin-top:.5rem"><input type="checkbox" data-chg="remind"' + (on ? " checked" : "") + '> Remind me weekly</label></div>';
+    var h = '<div class="card"><span class="k">Notifications</span>';
+    if (S.isTeacher && !S.preview) {
+      return h + '<p class="small" style="margin:0">Students who turn on notifications get one when you post a message, move the class to the next lesson, or open check-in.</p></div>';
+    }
+    var what = '<p class="small">Hear when your teacher posts a message, opens the next lesson, or opens check-in.</p>';
+    var ua = navigator.userAgent || "", ios = /iphone|ipad|ipod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+    if (S.preview) return h + what + '<p class="small" style="margin:0">(Students turn this on here.)</p></div>';
+    if (ios && !isStandalone()) return h + what + '<p class="small" style="margin:0">On iPhone and iPad, first add this app to your Home Screen (tap Share, then “Add to Home Screen”). Open it from there and turn notifications on.</p></div>';
+    if (!pushSupported()) return h + '<p class="small" style="margin:0">This browser cannot show notifications from the app.</p></div>';
+    if (Notification.permission === "denied") return h + what + '<p class="small" style="margin:0">Notifications are blocked for this app. Allow them in your phone or browser settings, then come back here.</p></div>';
+    if (S.push.on) return h + '<p class="small"><b>Notifications are on.</b> You will hear when your teacher posts a message, opens the next lesson, or opens check-in.</p><button class="btn block" type="button" data-act="pushoff"' + (S.push.busy ? " disabled" : "") + ">Turn off notifications</button></div>";
+    return h + what + '<button class="btn primary block" type="button" data-act="pushon"' + (S.push.busy ? " disabled" : "") + ">" + (S.push.busy ? "One moment…" : "Turn on notifications") + "</button></div>";
   }
   function themeCard() {
     var cur = store("dc_theme") || "auto";
@@ -1795,7 +1834,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     week: function (t) {
       var n = +t.getAttribute("data-n");
       if (S.confirmWeek !== n) { S.confirmWeek = n; render(); setTimeout(function () { if (S.confirmWeek === n) { S.confirmWeek = 0; render(); } }, 4000); return; }
-      S.confirmWeek = 0; S.settings = Object.assign({}, S.settings, { week: n }); S.draft.set = null; saveSettings(); toast("The class is now on Lesson " + n + "."); render();
+      var was = weekN();
+      S.confirmWeek = 0; S.settings = Object.assign({}, S.settings, { week: n }); S.draft.set = null;
+      saveSettings().then(function (ok) { if (ok && n > was) notifyClass("lesson"); });
+      toast("The class is now on Lesson " + n + "."); render();
     },
     att: function (t) {
       var id = t.getAttribute("data-id"), k = attKey(weekN()), a = S.attendance[k] || { present: {} };
@@ -1826,7 +1868,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       toast("Removed from your class."); go("tpeople");
     },
     postmsg: function () {
-      var tx = (S.draft.msg || "").trim(); S.settings = Object.assign({}, S.settings, { message: tx, mts: tx ? Date.now() : 0 }); S.draft.msg = ""; saveSettings(); toast(tx ? "Posted to your class." : "Cleared."); render();
+      var tx = (S.draft.msg || "").trim(); S.settings = Object.assign({}, S.settings, { message: tx, mts: tx ? Date.now() : 0 }); S.draft.msg = "";
+      saveSettings().then(function (ok) { if (ok && tx) notifyClass("message"); });
+      toast(tx ? "Posted to your class." : "Cleared."); render();
     },
     clearmsg: function () { S.draft.msg = ""; S.settings = Object.assign({}, S.settings, { message: "", mts: 0 }); saveSettings(); render(); },
     pick: function (t) { S.sel = t.getAttribute("data-id"); go("tperson"); },
@@ -1904,7 +1948,31 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       var m = S.auth.mode; if (S.auth.busy) return;
       if (m === "signin") doSignIn(); else if (m === "student" || m === "teacher" || m === "leader") doSignUp(); else if (m === "forgot") doForgot(); else doReset();
     },
-    signout: function () { try { sb.auth.signOut().then(function () {}, function () {}); } catch (e) {} resetState(); },
+    signout: function () {
+      var out = function () { try { sb.auth.signOut().then(function () {}, function () {}); } catch (e) {} resetState(); };
+      if (S.push.on) { S.push.on = false; pushOffHere().then(out, out); } else out();
+    },
+    pushon: function () {
+      if (S.push.busy) return;
+      S.push.busy = true; render();
+      var done = function (msg) { S.push.busy = false; if (msg) toast(msg); render(); };
+      Notification.requestPermission().then(function (p) {
+        if (p !== "granted") return done("Notifications were not allowed.");
+        return navigator.serviceWorker.ready.then(function (reg) {
+          return reg.pushManager.getSubscription().then(function (old) {
+            return old || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.push) });
+          });
+        }).then(pushSave).then(function () {
+          S.push.on = true; done("Notifications are on.");
+          sb.functions.invoke("notify", { body: { kind: "test" } }).then(function () {}, function () {});
+        });
+      }).catch(function () { done("Could not turn on notifications. Check your connection and try again."); });
+    },
+    pushoff: function () {
+      if (S.push.busy) return;
+      S.push.busy = true; render();
+      pushOffHere().then(function () { S.push.on = false; S.push.busy = false; toast("Notifications are off."); render(); });
+    },
     copycode: function () {
       var c = S.cls && S.cls.join_code; if (!c) return;
       copyText(c).then(function () { toast("Code copied."); }, function () { toast("Your class code is " + c); });
@@ -2255,7 +2323,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     checkin: function () {
       var on = !S.settings.checkin;
       S.settings = Object.assign({}, S.settings, { checkin: on });
-      saveCheckin(on).catch(failSave);
+      saveCheckin(on).then(function (ok) { if (ok && on) notifyClass("checkin"); }).catch(failSave);
       toast(on ? "Check-in is open. Students can tap “I’m here today”." : "Check-in is closed.");
       render();
     },
@@ -2647,15 +2715,8 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   /* restore theme */
   (function () { var th = store("dc_theme"); if (th) document.documentElement.setAttribute("data-theme", th); })();
 
-  /* weekly reminder check */
-  (function () {
-    var last = parseInt(store("dc_lastvisit"), 10);
-    var now = Date.now();
-    store("dc_lastvisit", String(now));
-    if (store("dc_remind") === "1" && "Notification" in window && Notification.permission === "granted" && last && now - last > 6 * 86400000) {
-      try { new Notification("Time for your lesson!", { body: "It has been a while. Open the app to continue.", icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>📖</text></svg>" }); } catch (e) {}
-    }
-  })();
+  /* the old "weekly reminder" (shown only when the app was opened) is replaced by push notifications */
+  store("dc_remind", null);
 
   boot();
 })();
