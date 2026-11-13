@@ -733,7 +733,11 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     var keep = {}; rows.forEach(function (r) { keep[r.id] = 1; });
     var gone = Object.keys(S.srvPrayers).filter(function (id) { return !keep[id]; });
     var first = rows.length ? sb.from("prayers").upsert(rows).then(ck) : Promise.resolve();
-    return first.then(function () { return gone.length ? sb.from("prayers").delete().in("id", gone).then(ck) : null; }).then(function () { S.srvPrayers = keep; });
+    var sentDel = (S.me.pdel || []).slice();
+    return first.then(function () { return gone.length ? sb.from("prayers").delete().in("id", gone).then(ck) : null; }).then(function () {
+      S.srvPrayers = keep;
+      S.me.pdel = (S.me.pdel || []).filter(function (id) { return sentDel.indexOf(id) < 0; }); saveLocal();
+    });
   }
   function pushJournal() {
     var ks = Object.keys(S.jdirty); if (!ks.length) return Promise.resolve();
@@ -855,11 +859,44 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     S.srvPrayers = {}; prayers.forEach(function (p) { S.srvPrayers[p.id] = 1; });
     var localDirty = store(lkm("dc_dirty")) === "1";
     if (localDirty) {
+      /* This phone has changes that never reached the server. Combine them with what the server has
+         (work may have been saved from another device meanwhile) instead of replacing it. */
       readLocal();
-      Object.keys(S.journal.entries).forEach(function (k) { S.jdirty[k] = true; });
-      try { var lp = JSON.parse(store(lkm("dc_p")) || "null"); S.prep = lp || pp; } catch (e) { S.prep = pp; }
-      Object.keys(S.prep).forEach(function (k) { S.pdirty[k] = true; });
-      S.me.name = S.me.name || S.profile.name;
+      var lm = S.me;
+      var tasks = decT(pg.tasks, o);
+      Object.keys(lm.tasks || {}).forEach(function (k) {
+        var a = lm.tasks[k] || [], b = tasks[k] || [], out = [];
+        for (var i = 0; i < Math.max(a.length, b.length); i++) out[i] = !!(a[i] || b[i]);
+        tasks[k] = out;
+      });
+      var pdel = {}; (lm.pdel || []).forEach(function (id) { pdel[id] = 1; });
+      var byId = {}; prayers.forEach(function (p) { if (!pdel[p.id]) byId[p.id] = p; });
+      (lm.prayers || []).forEach(function (p) { byId[p.id] = p; });
+      var mp = Object.keys(byId).map(function (id) { return byId[id]; }).sort(function (a, b) { return a.ts - b.ts; });
+      var sj = {};
+      Object.keys(shared).forEach(function (k) { sj[k] = true; });
+      var ents = {};
+      Object.keys(entries).forEach(function (k) { ents[k] = entries[k]; });
+      Object.keys(S.journal.entries).forEach(function (k) {
+        var le = S.journal.entries[k], se = entries[k];
+        if (le && (!se || (le.ts || 0) > (se.ts || 0))) { ents[k] = le; if (lm.sharedJ[k]) sj[k] = true; else delete sj[k]; S.jdirty[k] = true; }
+      });
+      var lp = null; try { lp = JSON.parse(store(lkm("dc_p")) || "null"); } catch (e) {}
+      var prepM = {};
+      Object.keys(pp).forEach(function (k) { prepM[k] = pp[k]; });
+      Object.keys(lp || {}).forEach(function (k) {
+        var le = lp[k], se = pp[k];
+        if (le && (!se || (le.ts || 0) > (se.ts || 0))) { prepM[k] = le; S.pdirty[k] = true; }
+      });
+      S.me = Object.assign(blankMe(), lm, {
+        name: lm.name || S.profile.name,
+        done: decL(pg.done, o).concat((lm.done || []).filter(function (n) { return !has(decL(pg.done, o), n); })),
+        verses: decL(pg.verses, o).concat((lm.verses || []).filter(function (n) { return !has(decL(pg.verses, o), n); })),
+        tasks: tasks, prayers: mp, sharedJ: sj, pdel: lm.pdel || [],
+        sharedEver: lm.sharedEver || Object.keys(sj).length > 0, pEver: lm.pEver || mp.length > 0
+      });
+      S.journal = { entries: ents }; S.prep = prepM;
+      saveLocal();
       setTimeout(function () { saveMe({ prayers: true }); saveJournal(); savePrep(); }, 300);
     } else {
       S.me = Object.assign(blankMe(), {
@@ -1686,7 +1723,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       S.draft.prayer = ""; saveMe({ prayers: true }); render();
     },
     prayans: function (t) { var p = S.me.prayers.filter(function (x) { return x.id === t.getAttribute("data-id"); })[0]; if (p) { p.a = !p.a; saveMe({ prayers: true }); render(); } },
-    praydel: function (t) { S.me.prayers = S.me.prayers.filter(function (x) { return x.id !== t.getAttribute("data-id"); }); saveMe({ prayers: true }); render(); },
+    praydel: function (t) {
+      var id = t.getAttribute("data-id");
+      S.me.prayers = S.me.prayers.filter(function (x) { return x.id !== id; });
+      /* remember the deletion until the server has it, so it is not brought back from the server copy */
+      if (S.srvPrayers[id]) { S.me.pdel = (S.me.pdel || []).concat([id]); }
+      saveMe({ prayers: true }); render();
+    },
     /* teacher */
     setup: function () {
       var d = S.draft.set; if (!S.db) { toast("Open this page while signed in to save your class."); return; }
@@ -1768,7 +1811,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     }
   };
   var CHG = {
-    jshare: function (t) { var n = +t.getAttribute("data-n"); S.me.sharedJ[n] = t.checked; if (t.checked) S.me.sharedEver = true; S.jdirty[n] = true; saveJournal(); toast(t.checked ? "Your teacher can read this entry." : "Only you can read this entry."); },
+    jshare: function (t) { var n = +t.getAttribute("data-n"); S.me.sharedJ[n] = t.checked; if (S.journal.entries[n]) S.journal.entries[n].ts = Date.now(); if (t.checked) S.me.sharedEver = true; S.jdirty[n] = true; saveJournal(); toast(t.checked ? "Your teacher can read this entry." : "Only you can read this entry."); },
     vis: function (t) { S.draft.vis = t.value; },
     sweek: function (t) { (S.draft.set = S.draft.set || {}).week = +t.value; },
     sahead: function (t) { (S.draft.set = S.draft.set || {}).ahead = t.checked; },
@@ -1843,7 +1886,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     copyText(tx).then(function () { toast("Message copied. Paste it into your group chat."); }, function () { toast("Could not copy the message."); });
   }
   function firstName(n) { return String(n || "").trim().split(/\s+/)[0] || "friend"; }
-  function csvCell(v) { v = v == null ? "" : String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+  function csvCell(v) { v = v == null ? "" : String(v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; /* stop names being run as Excel formulas */ return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
   function toCsv(rows) { return "﻿" + rows.map(function (r) { return r.map(csvCell).join(","); }).join("\r\n"); }
   function dayStr(ts) { return ts ? new Date(ts).toISOString().slice(0, 10) : ""; }
   function downloadFile(name, text, mime) {
