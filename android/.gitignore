@@ -1,0 +1,11 @@
+# never commit the signing key or its password
+*.keystore
+*.jks
+KEY-PASSWORD.txt
+# build output and local paths
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+*.idsig
