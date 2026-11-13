@@ -1024,7 +1024,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       store("dc_prof_" + S.uid, JSON.stringify(pr.data));
       S.profile = pr.data; S.isTeacher = pr.data.role === "teacher"; S.classId = pr.data.class_id; S.offline = false;
       await loadClass(); applyMat();
-      if (S.isTeacher) { S.me = blankMe(); S.me.name = "Preview student"; S.journal = { entries: {} }; await loadTeacherData(); try { await loadGroups(); } catch (e) { if (isNet(e)) throw e; } }
+      if (S.isTeacher) {
+        S.me = blankMe(); S.me.name = "Preview student"; S.journal = { entries: {} }; await loadTeacherData(); try { await loadGroups(); } catch (e) { if (isNet(e)) throw e; }
+        try { var ad = await sb.rpc("is_app_admin"); S.isAdmin = !ad.error && ad.data === true; } catch (e) { S.isAdmin = false; }
+      }
       else await loadStudentData();
       sb.from("profiles").update({ last_seen: iso() }).eq("id", S.uid).then(function () {}, function () {});
     } catch (e) {
@@ -1059,7 +1062,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     stopPoll(); Object.keys(timers).forEach(function (k) { clearTimeout(timers[k]); }); dirty = {};
     S.session = null; S.uid = null; S.email = ""; S.profile = null; S.cls = null; S.classId = null; S.isTeacher = false;
     S.settings = null; S.roster = {}; S.attendance = {}; S.prayerT = {}; S.wall = {}; S.shares = {};
-    S.me = blankMe(); S.journal = { entries: {} }; S.jdirty = {}; S.srvPrayers = {}; S.offline = false; S.failed = false; S.sel = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.att = { mine: [], held: [] }; S.vp = null; S.raw = null; S.dataMat = "disciple"; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null; setMaterial("disciple");
+    S.me = blankMe(); S.journal = { entries: {} }; S.jdirty = {}; S.srvPrayers = {}; S.offline = false; S.failed = false; S.sel = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.att = { mine: [], held: [] }; S.vp = null; S.raw = null; S.dataMat = "disciple"; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null; S.isAdmin = false; S.lastInvite = ""; setMaterial("disciple");
     S.draft = { name: "", prayer: "", vis: "t", msg: "", addname: "", set: null };
     S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", invite: "", mat: "disciple", busy: false, err: "", info: "", show: false };
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
@@ -1629,7 +1632,14 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       '<label class="chk"><input type="checkbox" data-chg="sahead"' + (d.ahead ? " checked" : "") + '> Let students read ahead</label>' +
       '<button class="btn primary block" type="button" data-act="savesettings" style="margin-top:.8rem">Save settings</button></div>' +
       joinCard() + leaderCard() + backupCard() +
-      '<div class="card"><span class="k">See what students see</span><p class="small">Open the student side to look around. Nothing you do there is saved or sent to your class.</p><button class="btn block" type="button" data-go="shome">Open student view</button></div>' + accountCard() + themeCard() + reminderCard();
+      '<div class="card"><span class="k">See what students see</span><p class="small">Open the student side to look around. Nothing you do there is saved or sent to your class.</p><button class="btn block" type="button" data-go="shome">Open student view</button></div>' + adminCard() + accountCard() + themeCard() + reminderCard();
+  }
+  /* only the app admin sees this: new teachers need a one-time invite to start a class */
+  function adminCard() {
+    if (!S.isAdmin) return "";
+    return '<div class="card"><span class="k">App admin</span><p class="small">New teachers need an invite to start a class. Each invite works once. Co-leaders do not need one; they use the co-leader code.</p>' +
+      (S.lastInvite ? '<p class="small" style="word-break:break-all">Latest invite code: <b>' + esc(S.lastInvite) + "</b></p>" : "") +
+      '<button class="btn block" type="button" data-act="teacherinvite">Invite a teacher</button></div>';
   }
 
   /* ---------- shell ---------- */
@@ -1866,6 +1876,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     copycode: function () {
       var c = S.cls && S.cls.join_code; if (!c) return;
       copyText(c).then(function () { toast("Code copied."); }, function () { toast("Your class code is " + c); });
+    },
+    teacherinvite: function () {
+      sb.rpc("create_teacher_invite").then(function (r) {
+        if (r.error) return failSave(r.error);
+        S.lastInvite = r.data; render();
+        shareText("You are invited to start a discipleship class.\nOpen this link and make your account:\n" + siteUrl() + "#invite=" + r.data, "Teacher invite");
+      }, failSave);
     },
     sharecode: function () {
       var c = S.cls && S.cls.join_code; if (!c) return;
