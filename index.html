@@ -680,7 +680,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   /* extra state */
   S.session = null; S.email = ""; S.profile = null; S.cls = null; S.classId = null; S.offline = false; S.failed = false;
   S.jdirty = {}; S.srvPrayers = {}; S.entering = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.confirmCode = null; S.att = { mine: [], held: [] }; S.vp = null; S.lastRef = 0; S.dataMat = "disciple"; S.raw = null; S.confirmMat = null; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null;
-  S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", mat: "disciple", busy: false, err: "", info: "", show: false };
+  S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", invite: "", mat: "disciple", busy: false, err: "", info: "", show: false };
 
   /* ---------- saving ---------- */
   var locks = {}, timers = {}, dirty = {};
@@ -1061,7 +1061,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     S.settings = null; S.roster = {}; S.attendance = {}; S.prayerT = {}; S.wall = {}; S.shares = {};
     S.me = blankMe(); S.journal = { entries: {} }; S.jdirty = {}; S.srvPrayers = {}; S.offline = false; S.failed = false; S.sel = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.att = { mine: [], held: [] }; S.vp = null; S.raw = null; S.dataMat = "disciple"; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null; setMaterial("disciple");
     S.draft = { name: "", prayer: "", vis: "t", msg: "", addname: "", set: null };
-    S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", mat: "disciple", busy: false, err: "", info: "", show: false };
+    S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", invite: "", mat: "disciple", busy: false, err: "", info: "", show: false };
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
     S.ready = true; render(); window.scrollTo(0, 0);
   }
@@ -1083,8 +1083,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (a.pass.length < 8) return authFail("Please choose a password with at least 8 characters.");
     if (a.mode === "student" && !a.code.trim()) return authFail("Please type the class code your teacher gave you.");
     if (a.mode === "leader" && !a.code.trim()) return authFail("Please type the co-leader code.");
+    if (a.mode === "teacher" && !a.invite.trim()) return authFail("Starting a new class needs an invite code. Ask the app admin for one.");
     a.busy = true; a.err = ""; render();
     try {
+      if (a.mode === "teacher") {
+        var iv = ck(await sb.rpc("validate_teacher_invite", { token: a.invite.trim() }));
+        if (!iv.data) return authFail("That invite code is not right or was already used. Ask the app admin for a new one.");
+      }
       if (a.mode === "student") {
         var c = ck(await sb.rpc("check_code", { code: a.code.trim() }));
         if (!c.data) return authFail("That class code is not right. Check it with your teacher.");
@@ -1094,7 +1099,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         if (!lc.data) return authFail("That co-leader code is not right. Check it with the class leader.");
       }
       var r = await sb.auth.signUp({ email: a.email.trim(), password: a.pass, options: { emailRedirectTo: location.origin + location.pathname,
-        data: { name: a.name.trim(), role: role, join_code: a.mode === "student" ? a.code.trim().toUpperCase() : "", leader_code: a.mode === "leader" ? a.code.trim().toUpperCase() : "", class_name: a.cname.trim(), material: a.mode === "teacher" ? (a.mat || "disciple") : "" } } });
+        data: { name: a.name.trim(), role: role, join_code: a.mode === "student" ? a.code.trim().toUpperCase() : "", leader_code: a.mode === "leader" ? a.code.trim().toUpperCase() : "", class_name: a.cname.trim(), invite_token: a.mode === "teacher" ? a.invite.trim() : "", material: a.mode === "teacher" ? (a.mat || "disciple") : "" } } });
       if (r.error) return authFail(friendly(r.error));
       if (r.data.user && r.data.user.identities && !r.data.user.identities.length) return authFail("That email already has an account. Try signing in instead.");
       a.busy = false; a.pass = "";
@@ -1159,6 +1164,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       links = '<button type="button" class="linkbtn" data-act="amode" data-m="signin">I already have an account</button>';
     } else if (m === "teacher") {
       f = fld("anm", "Your name", "aname", "text", a.name, 'autocomplete="name" maxlength="40"') +
+        fld("ainv", "Invite code (from the app admin)", "ainvite", "text", a.invite, 'autocomplete="off" autocapitalize="none" spellcheck="false"') +
         fld("acn", "Class name", "acname", "text", a.cname, 'placeholder="Wednesday evening group" maxlength="60"') +
         '<div class="field"><label class="f" for="amat">What will you teach?</label><select id="amat" data-chg="amat">' + MATS.map(function (m) { return '<option value="' + esc(m.id) + '"' + (m.id === (a.mat || "disciple") ? " selected" : "") + ">" + esc(m.name) + "</option>"; }).join("") + "</select></div>" +
         fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password (8 or more characters)", "apass", a.pass, true);
@@ -1201,6 +1207,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   async function boot() {
     S.ready = false; render();
     if (!sb) { S.ready = true; S.auth.err = "The app could not start. Please reload the page."; render(); return; }
+    /* an invite link (...#invite=CODE) opens the "Start a class" form with the code filled in */
+    var im = /^#invite=([A-Za-z0-9]+)$/.exec(location.hash || "");
+    if (im) { S.auth.mode = "teacher"; S.auth.invite = im[1]; try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
     sb.auth.onAuthStateChange(function (ev, session) {
       if (ev === "PASSWORD_RECOVERY") { S.auth.mode = "reset"; S.auth.err = ""; S.auth.info = ""; setTimeout(function () { S.ready = true; render(); }, 0); }
       else if (ev === "SIGNED_IN" && session) { setTimeout(function () { enter(session); }, 0); }
@@ -1871,6 +1880,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     apass2: function (t) { S.auth.pass2 = t.value; },
     aname: function (t) { S.auth.name = t.value; },
     acname: function (t) { S.auth.cname = t.value; },
+    ainvite: function (t) { S.auth.invite = t.value; },
     acode: function (t) { var v = t.value.toUpperCase(); if (v !== t.value) t.value = v; S.auth.code = v; }
   });
   Object.assign(CHG, {
