@@ -1,6 +1,6 @@
 // Keeps the app opening when the connection is poor.
 // Lessons and Bible verses are in data/*.json; each is saved here the first time the app loads it.
-const V = "dc-v9";
+const V = "dc-v10";
 
 // notifications from the class (sent by the "notify" function in Supabase)
 self.addEventListener("push", (e) => {
@@ -8,7 +8,7 @@ self.addEventListener("push", (e) => {
   try { d = e.data ? e.data.json() : {}; } catch (x) { d = { body: e.data ? e.data.text() : "" }; }
   e.waitUntil(self.registration.showNotification(d.title || "Discipleship Class", {
     body: d.body || "", tag: d.tag || "class", renotify: true,
-    icon: "icons/icon-192.png", badge: "icons/icon-192.png", data: { url: d.url || "" }
+    icon: "icons/icon-192.png", badge: "icons/badge-96.png", data: { url: d.url || "" }
   }));
 });
 self.addEventListener("notificationclick", (e) => {
@@ -19,7 +19,7 @@ self.addEventListener("notificationclick", (e) => {
     return self.clients.openWindow(target);
   }));
 });
-const CORE = ["./", "index.html", "config.js", "supabase.js", "591.supabase.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "ss4-latin.woff2", "ss4-latin-i.woff2"];
+const CORE = ["./", "index.html", "config.js", "supabase.js", "591.supabase.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/badge-96.png", "ss4-latin.woff2", "ss4-latin-i.woff2"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(V).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
 });
