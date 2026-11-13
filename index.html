@@ -2,6 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Security policy: the page may only load its own files and talk to its own Supabase project.
+     If you move to another Supabase project, change the two supabase.co addresses here too. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://sbfecjnffugvqwzgnnqn.supabase.co wss://sbfecjnffugvqwzgnnqn.supabase.co; worker-src 'self'; manifest-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<script>
+  /* never run inside another site's frame (stops "clickjacking" tricks) */
+  if (window.top !== window.self) { try { window.top.location = window.self.location.href; } catch (e) { document.documentElement.style.display = "none"; } }
+</script>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Discipleship Class</title>
 <meta name="description" content="Weekly discipleship lessons for your class: lessons, verses, journal and prayer.">
@@ -565,7 +573,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         return r.json();
       }).then(function (ls) {
         if (!Array.isArray(ls) || !ls.length) throw new TypeError("Failed to fetch lessons");
-        m.lessons = ls; return m;
+        m.lessons = ls;
+        if (MAT === m && !LESSONS.length) { LESSONS = ls; TOTAL = ls.length; } /* this is the material already chosen */
+        return m;
       }, function () { throw new TypeError("Failed to fetch lessons"); }).catch(function (e) { delete matLoading[m.id]; throw e; });
     }
     return matLoading[m.id];
@@ -686,6 +696,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function ms(s) { var t = Date.parse(s); return isNaN(t) ? 0 : t; }
   function friendly(e) {
     var m = (e && (e.message || e.error_description || e.msg)) || String(e || ""), c = (e && (e.code || e.error_code)) || "";
+    if (/Too many tries/i.test(m)) return "Too many tries. Please wait a few minutes and try again.";
     if (/Invalid login/i.test(m)) return "That email and password do not match. Check them and try again.";
     if (/already registered|already been registered|user_already_exists/i.test(m + c)) return "That email already has an account. Try signing in instead.";
     if (/not confirmed/i.test(m + c)) return "Please confirm your email first. Open the message we sent you and tap the link.";
@@ -980,7 +991,11 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   /* switch to the class's material, fetching its lessons first if this phone does not have them yet */
   async function applyMat() {
     var id = (S.settings && S.settings.material) || "disciple";
-    if (id === MAT.id && MAT.lessons) return false;
+    if (id === MAT.id && MAT.lessons) {
+      /* the early fetch may have finished before sign-in: make sure the lessons are actually in use */
+      if (LESSONS !== MAT.lessons) setMaterial(id);
+      return false;
+    }
     try { await loadMat(id); }
     catch (e) { setMaterial(id); throw e; } /* remember which lessons are missing so "Try again" fetches the right ones */
     setMaterial(id); return true;
@@ -1115,7 +1130,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       } else throw e;
     }
     if (S.settings === undefined) S.settings = null;
-    if (!MAT.lessons) { try { await loadMat(MAT.id); setMaterial(MAT.id); } catch (x) {} }
+    if (!LESSONS.length) { try { await loadMat(MAT.id); setMaterial(MAT.id); } catch (x) {} }
     S.draft.name = S.me.name || ""; S.draft.set = null;
     startPoll(); startLive(); checkPush();
   }
@@ -1424,7 +1439,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function journalBox(n) {
     var e = S.journal.entries[n] || {}, shared = !!S.me.sharedJ[n];
     return '<div class="jbox"><label class="f" for="j' + n + '">What stood out to you? What will you do about it this week?</label>' +
-      '<textarea id="j' + n + '" data-bind="j" data-n="' + n + '" placeholder="Write here. This is just for you unless you choose to share it.">' + esc(e.t || "") + "</textarea>" +
+      '<textarea maxlength="10000" id="j' + n + '" data-bind="j" data-n="' + n + '" placeholder="Write here. This is just for you unless you choose to share it.">' + esc(e.t || "") + "</textarea>" +
       '<div class="foot"><label class="chk"><input type="checkbox" data-chg="jshare" data-n="' + n + '"' + (shared ? " checked" : "") + '> Share this with my teacher</label><span class="saved" id="sv' + n + '">' + (e.ts ? "Saved " + ago(e.ts) : "") + "</span></div></div>";
   }
   function vStudentLesson(n) {
@@ -1469,7 +1484,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   }
   function vStudentPray() {
     var h = '<div class="hero"><p class="eyebrow">Prayer</p><h1>Prayer requests</h1><p class="lede">Share what you would like prayer for. You choose who can see it.</p></div>' + syncNote();
-    h += '<div class="card"><label class="f" for="pr">What would you like prayer for?</label><textarea id="pr" data-bind="prayer" style="min-height:6rem">' + esc(S.draft.prayer) + "</textarea>" +
+    h += '<div class="card"><label class="f" for="pr">What would you like prayer for?</label><textarea maxlength="1000" id="pr" data-bind="prayer" style="min-height:6rem">' + esc(S.draft.prayer) + "</textarea>" +
       '<div class="field" style="margin-top:.6rem"><label class="chk"><input type="radio" name="vis" data-chg="vis" value="t"' + (S.draft.vis === "t" ? " checked" : "") + '> Only my teacher</label><label class="chk"><input type="radio" name="vis" data-chg="vis" value="g"' + (S.draft.vis === "g" ? " checked" : "") + '> My whole class</label></div>' +
       '<button class="btn primary block" type="button" data-act="prayadd">Add request</button></div>';
     var mine = S.me.prayers.slice().sort(function (a, b) { return b.ts - a.ts; });
@@ -1604,7 +1619,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += backfillCard(w, ros);
     h += '<div class="card"><label class="f" for="am">Add someone who is not using the app</label><div class="row" style="margin:0"><input type="text" id="am" data-bind="addname" value="' + esc(S.draft.addname) + '" placeholder="Name" maxlength="40" style="flex:2 1 10rem"><button class="btn" type="button" data-act="addstudent" style="flex:1 1 6rem">Add</button></div></div>';
     h += installCard();
-    h += '<h2 class="sub">Message to the class</h2><div class="card"><textarea id="msg" data-bind="msg" placeholder="A short note students see on their home screen">' + esc(S.draft.msg !== null && S.draft.msg !== undefined && S.draft.msg !== "" ? S.draft.msg : (S.settings.message || "")) + '</textarea><div class="row" style="margin:.7rem 0 0"><button class="btn primary" type="button" data-act="postmsg">Post to class</button>' + (S.settings.message ? '<button class="btn ghost" type="button" data-act="clearmsg">Clear</button>' : "") + "</div></div>";
+    h += '<h2 class="sub">Message to the class</h2><div class="card"><textarea maxlength="1000" id="msg" data-bind="msg" placeholder="A short note students see on their home screen">' + esc(S.draft.msg !== null && S.draft.msg !== undefined && S.draft.msg !== "" ? S.draft.msg : (S.settings.message || "")) + '</textarea><div class="row" style="margin:.7rem 0 0"><button class="btn primary" type="button" data-act="postmsg">Post to class</button>' + (S.settings.message ? '<button class="btn ghost" type="button" data-act="clearmsg">Clear</button>' : "") + "</div></div>";
     h += '<h2 class="sub">Move the class</h2><div class="row">';
     if (w > 1) h += '<button class="btn" type="button" data-act="week" data-n="' + (w - 1) + '">' + (S.confirmWeek === w - 1 ? "Tap again to confirm" : "Back to Lesson " + (w - 1)) + "</button>";
     if (w < TOTAL) h += '<button class="btn primary" type="button" data-act="week" data-n="' + (w + 1) + '">' + (S.confirmWeek === w + 1 ? "Tap again to confirm" : "On to Lesson " + (w + 1)) + "</button>";
@@ -2116,7 +2131,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function prepBox(n) {
     var e = S.prep[n] || {};
     return '<div class="jbox" style="margin-top:1rem"><label class="f" for="p' + n + '">Your answers before class (optional)</label>' +
-      '<textarea id="p' + n + '" data-bind="prep" data-n="' + n + '" placeholder="Write a few thoughts. Your teacher can read what you write here.">' + esc(e.t || "") + "</textarea></div>";
+      '<textarea maxlength="5000" id="p' + n + '" data-bind="prep" data-n="' + n + '" placeholder="Write a few thoughts. Your teacher can read what you write here.">' + esc(e.t || "") + "</textarea></div>";
   }
   function phaseCard() {
     var last = null;
@@ -2585,7 +2600,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         '<button class="btn sm ghost" type="button" data-act="notedel" data-nid="' + esc(n.id) + '">' + (S.confirmNote === n.id ? "Tap again to delete" : "Delete") + "</button></div></div>";
     });
     if (!list.length) h += '<p class="small">No notes yet.</p>';
-    h += '<div class="field"><label class="f" for="nb">Add a note</label><textarea id="nb" data-bind="notebody" placeholder="For example: lost her job, please pray. Call on Thursday.">' + esc(d.body) + "</textarea></div>" +
+    h += '<div class="field"><label class="f" for="nb">Add a note</label><textarea maxlength="2000" id="nb" data-bind="notebody" placeholder="For example: lost her job, please pray. Call on Thursday.">' + esc(d.body) + "</textarea></div>" +
       '<div class="field"><label class="f" for="nd">Follow up on (optional)</label><input type="date" id="nd" data-bind="notedue" value="' + esc(d.due) + '"></div>' +
       '<button class="btn block" type="button" data-act="noteadd">Save note</button></div>';
     return h;

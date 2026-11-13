@@ -13,6 +13,8 @@ const json = (b: unknown, status = 200) =>
   new Response(JSON.stringify(b), { status, headers: { ...cors, "Content-Type": "application/json" } });
 
 type Sub = { endpoint: string; p256dh: string; auth: string };
+// only real browser push services; anything else is never contacted
+const PUSH_HOST = /^https:\/\/([a-z0-9-]+\.)*(fcm\.googleapis\.com|push\.services\.mozilla\.com|notify\.windows\.com|push\.apple\.com)(\/|$)/i;
 type Note = { title: string; body: string; url: string; tag: string };
 
 Deno.serve(async (req) => {
@@ -39,6 +41,10 @@ Deno.serve(async (req) => {
   let note: Note, userIds: string[], classId: string | null = null;
 
   if (kind === "test") {
+    // a person can send themselves a test at most every 30 seconds
+    const since = new Date(Date.now() - 30 * 1000).toISOString();
+    const { data: recent } = await db.from("push_log").select("id").eq("sent_by", uid).eq("kind", "test").gte("sent_at", since).limit(1);
+    if (recent && recent.length) return json({ skipped: "sent less than 30 seconds ago" });
     note = { title: "Notifications are on", body: "You will hear from your class here.", url: "#shome", tag: "test" };
     userIds = [uid];
   } else {
@@ -74,7 +80,7 @@ Deno.serve(async (req) => {
   let subs: Sub[] = [];
   if (userIds.length) {
     const { data } = await db.from("push_subs").select("endpoint,p256dh,auth").in("user_id", userIds);
-    subs = data || [];
+    subs = (data || []).filter((s: Sub) => PUSH_HOST.test(s.endpoint));
   }
 
   const payload = JSON.stringify(note);
@@ -92,7 +98,7 @@ Deno.serve(async (req) => {
     }
   });
   if (gone.length) await db.from("push_subs").delete().in("endpoint", gone);
-  if (classId) await db.from("push_log").insert({ class_id: classId, kind, sent_by: uid, recipients: sent });
+  await db.from("push_log").insert({ class_id: classId, kind, sent_by: uid, recipients: sent });
 
   return json({ sent, failed, removed: gone.length });
 });
