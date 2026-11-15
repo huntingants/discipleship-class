@@ -302,7 +302,7 @@ h2.sub { font-family: var(--sans); font-size: 1.25rem; line-height: 1.2; margin:
 .card > :last-child { margin-bottom: 0; }
 .card p { margin: 0 0 .7rem; }
 .card.navy { background: var(--navy); color: var(--on-navy); border-color: var(--navy); }
-.card.navy .eyebrow, .card.navy small.k { color: var(--on-navy); }
+.card.navy .eyebrow, .card.navy .k { color: var(--on-navy); }
 .card.tint { background: var(--tint); border-color: transparent; }
 .card.warn { border-color: var(--gold-soft); border-left-width: 4px; }
 .k { display: block; font-family: var(--sans); font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text); margin-bottom: .25rem; }
@@ -723,7 +723,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* crash reports: send a short note about unexpected errors so the app admin can see them.
      No names, notes or journal text are sent: only the error message, where it happened and the browser. */
-  var APP_VER = "dc-v15", errSent = {}, errCount = 0;
+  var APP_VER = "dc-v16", errSent = {}, errCount = 0;
   function reportError(msg, src) {
     try {
       msg = String(msg || "").slice(0, 500);
@@ -1288,7 +1288,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     return '<div class="field"><label class="f" for="' + id + '">' + label + '</label><input type="' + type + '" id="' + id + '" data-bind="' + bind + '" value="' + esc(val) + '" ' + (extra || "") + "></div>";
   }
   function pwField(id, label, bind, val, newpw) {
-    return fld(id, label, bind, S.auth.show ? "text" : "password", val, 'autocomplete="' + (newpw ? "new-password" : "current-password") + '" autocapitalize="none" spellcheck="false"');
+    return fld(id, label, bind, S.auth.show ? "text" : "password", val, 'autocomplete="' + (newpw ? "new-password" : "current-password") + '" autocapitalize="none" spellcheck="false"') +
+      /* say the rules before the first try, not after a failed one */
+      (newpw && id === "apw" ? '<p class="small" style="margin:-.5rem 0 .9rem">At least 8 characters, with a small letter, a capital letter, a number and a symbol. For example: Grace2026!</p>' : "");
   }
   function vAuth() {
     var a = S.auth, m = a.mode, T = {
@@ -1311,7 +1313,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     } else if (m === "student") {
       f = fld("anm", "Your first name", "aname", "text", a.name, 'autocomplete="given-name" maxlength="40"') +
         fld("acd", "Class code", "acode", "text", a.code, 'autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="10" class="codein" data-chg="acode"') + '<p class="small" id="codeNote" style="margin:-.5rem 0 .9rem"></p>' +
-        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password (8 or more characters)", "apass", a.pass, true);
+        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password", "apass", a.pass, true);
       btn = "Join the class";
       links = '<button type="button" class="linkbtn" data-act="amode" data-m="signin">I already have an account</button>';
     } else if (m === "teacher") {
@@ -1319,13 +1321,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         fld("ainv", "Invite code (from the app admin)", "ainvite", "text", a.invite, 'autocomplete="off" autocapitalize="none" spellcheck="false"') +
         fld("acn", "Class name", "acname", "text", a.cname, 'placeholder="Wednesday evening group" maxlength="60"') +
         '<div class="field"><label class="f" for="amat">What will you teach?</label><select id="amat" data-chg="amat">' + MATS.map(function (m) { return '<option value="' + esc(m.id) + '"' + (m.id === (a.mat || "disciple") ? " selected" : "") + ">" + esc(m.name) + "</option>"; }).join("") + "</select></div>" +
-        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password (8 or more characters)", "apass", a.pass, true);
+        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password", "apass", a.pass, true);
       btn = "Create my class";
       links = '<button type="button" class="linkbtn" data-act="amode" data-m="signin">I already have an account</button>';
     } else if (m === "leader") {
       f = fld("anm", "Your name", "aname", "text", a.name, 'autocomplete="name" maxlength="40"') +
         fld("acd", "Co-leader code", "acode", "text", a.code, 'autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="10" class="codein" data-chg="acode"') + '<p class="small" id="codeNote" style="margin:-.5rem 0 .9rem"></p>' +
-        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password (8 or more characters)", "apass", a.pass, true);
+        fld("aem", "Email", "aemail", "email", a.email, 'autocomplete="email" autocapitalize="none" spellcheck="false" inputmode="email"') + pwField("apw", "Choose a password", "apass", a.pass, true);
       btn = "Join as co-leader";
       links = '<button type="button" class="linkbtn" data-act="amode" data-m="signin">I already have an account</button>';
     } else if (m === "forgot") {
@@ -1333,13 +1335,14 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       btn = "Send me a link";
       links = '<button type="button" class="linkbtn" data-act="amode" data-m="signin">Back to sign in</button>';
     } else {
-      f = pwField("apw", "New password (8 or more characters)", "apass", a.pass, true) + pwField("apw2", "Type it again", "apass2", a.pass2, true);
+      f = pwField("apw", "New password", "apass", a.pass, true) + pwField("apw2", "Type it again", "apass2", a.pass2, true);
       btn = "Save new password";
     }
     h += '<form class="card" data-form="auth" novalidate>' + f +
       (m !== "forgot" ? '<label class="chk"><input type="checkbox" data-chg="showpw"' + (a.show ? " checked" : "") + "> Show password</label>" : "") +
       '<button class="btn primary block" type="submit"' + (a.busy ? " disabled" : "") + ' style="margin-top:.6rem">' + (a.busy ? "One moment…" : btn) + "</button></form>" + links;
-    h += '<p class="small" style="text-align:center;margin-top:1.4rem">Your teacher sees your name and your progress. Your journal stays private unless you share an entry. <a href="privacy.html">Privacy</a></p>';
+    /* the note about what a teacher sees is for students; leaders only get the link */
+    h += '<p class="small" style="text-align:center;margin-top:1.4rem">' + (m === "teacher" || m === "leader" ? "" : "Your teacher sees your name and your progress. Your journal stays private unless you share an entry. ") + '<a href="privacy.html">Privacy</a></p>';
     return h;
   }
   function accountCard() {
@@ -1684,6 +1687,18 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += '<div class="row"><button class="btn primary" type="button" data-go="tr' + w + '">Run this class</button><button class="btn" type="button" data-go="tl' + w + '">Read the script</button></div>';
     h += '<div class="stats"><div class="stat"><b>' + ros.length + '</b><span>Students</span></div><div class="stat"><b>' + nread + '</b><span>Read it</span></div><div class="stat"><b>' + ntasks + '</b><span>Tasks</span></div></div>';
     if (!ros.length) h += joinCard();
+    /* the two things a leader does most: message the class and move it on */
+    var cm = S.settings.message || "", nt = S.notified && S.notified.mts === S.settings.mts ? S.notified.n : 0;
+    h += '<h2 class="sub">Message to the class</h2>';
+    if (cm) h += '<div class="card tint"><span class="k">Students see now' + (S.settings.mts ? " · " + dshort(S.settings.mts) : "") + (nt ? " · " + nt + (nt === 1 ? " phone" : " phones") + " notified" : "") + '</span><p style="white-space:pre-wrap;margin:0 0 .8rem">' + esc(cm) + '</p>' +
+      '<div class="row" style="margin:0"><button class="btn" type="button" data-act="editmsg">Edit</button><button class="btn ghost" type="button" data-act="clearmsg">Remove</button></div></div>';
+    h += '<div class="card"><label class="f" for="msg">' + (cm ? "New message (replaces the one above)" : "New message") + '</label><textarea maxlength="1000" id="msg" data-bind="msg" placeholder="A short note students see on their home screen">' + esc(S.draft.msg || "") + '</textarea><div class="row" style="margin:.7rem 0 0"><button class="btn primary" type="button" data-act="postmsg">Post to class</button></div></div>';
+    h += '<h2 class="sub">Move the class</h2><div class="row">';
+    if (w > 1) h += '<button class="btn" type="button" data-act="week" data-n="' + (w - 1) + '">' + (S.confirmWeek === w - 1 ? "Tap again to confirm" : "Back to Lesson " + (w - 1)) + "</button>";
+    if (w < TOTAL) h += '<button class="btn primary" type="button" data-act="week" data-n="' + (w + 1) + '">' + (S.confirmWeek === w + 1 ? "Tap again to confirm" : "On to Lesson " + (w + 1)) + "</button>";
+    var toFull = MAT.id === "prep" && w >= TOTAL && matById("disciple");
+    if (toFull) h += '<button class="btn primary" type="button" data-act="setmat" data-id="disciple">' + (S.confirmMat === "disciple" ? "Tap again to switch" : "Preparatory lessons done: start the Disciple Series") + "</button>";
+    h += '</div><p class="small">' + (toFull ? "This is the last preparatory lesson. Starting the Disciple Series begins the full course at Lesson 1; the preparatory lessons stay saved." : "Moving the class opens the next lesson for your students.") + "</p>";
     h += dueNotesCard();
     h += attentionCard(w, ros);
     h += nudgeCard(w, ros);
@@ -1697,17 +1712,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += backfillCard(w, ros);
     h += '<div class="card"><label class="f" for="am">Add someone who is not using the app</label><div class="row" style="margin:0"><input type="text" id="am" data-bind="addname" value="' + esc(S.draft.addname) + '" placeholder="Name" maxlength="40" style="flex:2 1 10rem"><button class="btn" type="button" data-act="addstudent" style="flex:1 1 6rem">Add</button></div></div>';
     h += installCard();
-    var cm = S.settings.message || "", nt = S.notified && S.notified.mts === S.settings.mts ? S.notified.n : 0;
-    h += '<h2 class="sub">Message to the class</h2>';
-    if (cm) h += '<div class="card tint"><span class="k">Students see now' + (S.settings.mts ? " · " + dshort(S.settings.mts) : "") + (nt ? " · " + nt + (nt === 1 ? " phone" : " phones") + " notified" : "") + '</span><p style="white-space:pre-wrap;margin:0 0 .8rem">' + esc(cm) + '</p>' +
-      '<div class="row" style="margin:0"><button class="btn" type="button" data-act="editmsg">Edit</button><button class="btn ghost" type="button" data-act="clearmsg">Remove</button></div></div>';
-    h += '<div class="card"><label class="f" for="msg">' + (cm ? "New message (replaces the one above)" : "New message") + '</label><textarea maxlength="1000" id="msg" data-bind="msg" placeholder="A short note students see on their home screen">' + esc(S.draft.msg || "") + '</textarea><div class="row" style="margin:.7rem 0 0"><button class="btn primary" type="button" data-act="postmsg">Post to class</button></div></div>';
-    h += '<h2 class="sub">Move the class</h2><div class="row">';
-    if (w > 1) h += '<button class="btn" type="button" data-act="week" data-n="' + (w - 1) + '">' + (S.confirmWeek === w - 1 ? "Tap again to confirm" : "Back to Lesson " + (w - 1)) + "</button>";
-    if (w < TOTAL) h += '<button class="btn primary" type="button" data-act="week" data-n="' + (w + 1) + '">' + (S.confirmWeek === w + 1 ? "Tap again to confirm" : "On to Lesson " + (w + 1)) + "</button>";
-    var toFull = MAT.id === "prep" && w >= TOTAL && matById("disciple");
-    if (toFull) h += '<button class="btn primary" type="button" data-act="setmat" data-id="disciple">' + (S.confirmMat === "disciple" ? "Tap again to switch" : "Preparatory lessons done: start the Disciple Series") + "</button>";
-    return h + '</div><p class="small">' + (toFull ? "This is the last preparatory lesson. Starting the Disciple Series begins the full course at Lesson 1; the preparatory lessons stay saved." : "Moving the class opens the next lesson for your students.") + "</p>";
+    return h;
   }
   function vTeacherPlan() {
     var w = weekN();
@@ -1837,13 +1842,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (S.settings === undefined) return '<div class="hero"><div class="skel-line" style="width:25%;height:.7rem"></div><div class="skel" style="height:2rem;width:55%;margin:.5rem 0 0"></div></div><div class="skel" style="height:3rem;margin:0 0 .9rem"></div><div class="skel" style="height:3rem;margin:0 0 .9rem"></div><div class="skel" style="height:2.5rem;width:40%"></div>';
     if (!S.settings) return vNoGroup();
     var d = S.draft.set || (S.draft.set = { name: S.settings.name || "", meet: S.settings.meet || "", week: weekN(), ahead: !!S.settings.ahead });
-    return '<div class="hero"><p class="eyebrow">Class</p><h1>Class settings</h1></div>' + dbNote() + groupsCard() + materialCard() +
+    return '<div class="hero"><p class="eyebrow">Class</p><h1>Class settings</h1></div>' + dbNote() + joinCard() +
       '<div class="card"><div class="field"><label class="f" for="cn">Class name</label><input type="text" id="cn" data-bind="sname" value="' + esc(d.name) + '" maxlength="60"></div>' +
       '<div class="field"><label class="f" for="cm">When and where do you meet?</label><input type="text" id="cm" data-bind="smeet" value="' + esc(d.meet) + '" maxlength="80"></div>' +
       '<div class="field"><label class="f" for="cw">Current lesson</label>' + weekSelect("cw", "sweek", d.week) + '</div>' +
       '<label class="chk"><input type="checkbox" data-chg="sahead"' + (d.ahead ? " checked" : "") + '> Let students read ahead</label>' +
       '<button class="btn primary block" type="button" data-act="savesettings" style="margin-top:.8rem">Save settings</button></div>' +
-      joinCard() + leaderCard() + backupCard() +
+      leaderCard() + groupsCard() + materialCard() + backupCard() +
       '<div class="card"><span class="k">See what students see</span><p class="small">Open the student side to look around. Nothing you do there is saved or sent to your class.</p><button class="btn block" type="button" data-go="shome">Open student view</button></div>' + adminCard() + accountCard() + themeCard() + reminderCard();
   }
   /* only the app admin sees this: new teachers need a one-time invite to start a class */

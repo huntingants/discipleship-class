@@ -119,6 +119,7 @@ function start(opt) {
     pushLog,
     fire(type, ev) { (winOn[type] || []).forEach((f) => f(ev)); },
     page: () => (els.app ? els.app.innerHTML : ""),
+    html: (id) => (els[id] ? els[id].innerHTML || els[id].textContent : ""),
     toast: () => (els.toast ? els.toast.textContent : ""),
     click(act, attrs) { on.click({ target: { closest: (sel) => sel === "[data-act]" ? { getAttribute: (k) => k === "data-act" ? act : (attrs || {})[k] } : null }, preventDefault() {} }); },
     type(bind, value) { on.input({ target: { getAttribute: (k) => (k === "data-bind" ? bind : null), value } }); },

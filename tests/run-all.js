@@ -143,7 +143,7 @@ const tests = {
     app.fire("unhandledrejection", { reason: new Error("lost promise") });
     const s = sent();
     check("two different errors sent, repeats and noise skipped", s.length === 2, JSON.stringify(s.map((r) => r.args.p_msg)));
-    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v15", JSON.stringify(s[0] && s[0].args));
+    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v16", JSON.stringify(s[0] && s[0].args));
     for (let i = 0; i < 20; i++) app.fire("error", { message: "e" + i });
     check("at most 10 reports per visit", sent().length === 10, String(sent().length));
     const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true, recent_client_errors: [{ at: iso(T2), msg: "<b>bad</b>", page: "#shome", agent: "Phone", ver: "dc-v11", signed_in: true }] } });
@@ -211,6 +211,20 @@ const tests = {
     app.type("msg", "Hi"); app.click("postmsg");
     await wait(2500);
     check("clear message that nobody was notified", /nobody got a notification/.test(app.toast()), app.toast());
+  },
+
+  async "Layout: leaders see their most-used actions first; sign-up explains the password"() {
+    const t = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tdash" });
+    const c = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tset" });
+    const st = start({ server: {}, signedIn: false });
+    const te = start({ server: {}, signedIn: false });
+    await wait(1500);
+    const at = (pg, a, b) => pg.indexOf(a) > -1 && pg.indexOf(b) > -1 && pg.indexOf(a) < pg.indexOf(b);
+    check("Today: message and Move the class come before attendance", at(t.page(), "Message to the class", "Who is here today?") && at(t.page(), "Move the class", "Who is here today?"));
+    check("Class tab: class code comes before teaching material", at(c.page(), "Your class code", "Teaching material"), "");
+    st.click("amode", { "data-m": "student" }); te.click("amode", { "data-m": "teacher" }); await wait(200);
+    check("student sign-up shows the password rule and the privacy note", /capital letter, a number and a symbol/.test(st.page()) && /Your teacher sees your name/.test(st.page()));
+    check("teacher sign-up shows the rule but not the student note", /capital letter, a number and a symbol/.test(te.page()) && !/Your teacher sees your name/.test(te.page()) && te.page().includes("privacy.html"));
   },
 
   async "Notifications: which teacher actions notify the class"() {
