@@ -1977,6 +1977,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       if (v === "auto") { r.removeAttribute("data-theme"); store("dc_theme", null); }
       else if (v === "light") { r.setAttribute("data-theme", "light"); store("dc_theme", "light"); }
       else { r.setAttribute("data-theme", v); store("dc_theme", v); }
+      syncThemeColor();
     },
     remind: function (t) {
       if (t.checked) {
@@ -2776,6 +2777,17 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* restore theme */
   (function () { var th = store("dc_theme"); if (th) document.documentElement.setAttribute("data-theme", th); })();
+
+  /* make the browser / installed-app title bar match the current theme's bar color */
+  function syncThemeColor() {
+    try {
+      var c = getComputedStyle(document.documentElement).getPropertyValue("--navy").trim();
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (c && m) m.setAttribute("content", c);
+    } catch (e) { }
+  }
+  syncThemeColor();
+  try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncThemeColor); } catch (e) { }
 
   /* the old "weekly reminder" (shown only when the app was opened) is replaced by push notifications */
   store("dc_remind", null);
