@@ -1,0 +1,22 @@
+# Knocks on the database once a day so Supabase's free plan never pauses it for being idle.
+# Uses the public key from config.js (safe to publish). Can also be run by hand from the Actions tab.
+name: Keep database awake
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ping the database
+        run: |
+          URL=$(grep -o 'https://[a-z0-9]*\.supabase\.co' config.js | head -1)
+          KEY=$(grep -o 'key: *"[^"]*"' config.js | sed 's/.*"\(.*\)"/\1/')
+          OUT=$(curl -sS -w " %{http_code}" "$URL/rest/v1/rpc/ping" -H "apikey: $KEY")
+          echo "$OUT"
+          case "$OUT" in *" 200") ;; *) echo "Ping failed"; exit 1 ;; esac

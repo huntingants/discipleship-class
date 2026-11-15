@@ -18,15 +18,12 @@ CHANGING THE APP
     To run them on a computer: node tests/run-all.js
   * After a change, phones pick up the new version the next time the app is fully closed and reopened.
 
-KEEP THE FREE DATABASE AWAKE (do this once)
-  Supabase pauses a free project after about a week with nobody using it. A free website can knock every day.
-  1. Go to cron-job.org and make a free account.
-  2. Create cronjob. Title: Disciple keep-alive.
-  3. URL: https://sbfecjnffugvqwzgnnqn.supabase.co/rest/v1/rpc/ping
-  4. Schedule: every day.
-  5. Open "Advanced". Under Headers add one header.  Name: apikey   Value: the "key" value inside config.js
-     (it is the public key and safe to use here). Without this header the knock is refused (status 401).
-  6. Request method: GET. Save, then tap "Test run". A good result shows status 200 and "ok".
+KEEP THE FREE DATABASE AWAKE (automatic)
+  Supabase pauses a free project after about a week with nobody using it. GitHub knocks on it every day
+  (.github/workflows/keep-alive.yml, shown as "Keep database awake" in the Actions tab).
+  GitHub switches daily jobs off if the repository has no changes for 60 days; it emails you first,
+  and one click on "Enable workflow" in the Actions tab turns it back on.
+  A cron-job.org job is no longer needed and can be deleted.
 
 DATABASE SETTINGS WORTH TURNING ON (Supabase dashboard)
   * Authentication > Providers/Policies: turn on leaked-password protection.
