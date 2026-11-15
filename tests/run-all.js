@@ -143,7 +143,7 @@ const tests = {
     app.fire("unhandledrejection", { reason: new Error("lost promise") });
     const s = sent();
     check("two different errors sent, repeats and noise skipped", s.length === 2, JSON.stringify(s.map((r) => r.args.p_msg)));
-    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v13", JSON.stringify(s[0] && s[0].args));
+    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v14", JSON.stringify(s[0] && s[0].args));
     for (let i = 0; i < 20; i++) app.fire("error", { message: "e" + i });
     check("at most 10 reports per visit", sent().length === 10, String(sent().length));
     const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true, recent_client_errors: [{ at: iso(T2), msg: "<b>bad</b>", page: "#shome", agent: "Phone", ver: "dc-v11", signed_in: true }] } });
@@ -168,6 +168,22 @@ const tests = {
     app.click("clearmsg"); await wait(300);
     const last = app.writes.filter((w) => w.table === "classes" && w.payload && "message" in w.payload).pop();
     check("Clear still clears", last && last.payload.message === "");
+  },
+
+  async "Message to the class: posted message shows above an empty box, Edit loads it back"() {
+    const app = start({ server: teacher({ week: 1, material: "disciple", message: "Bring your Bible", message_at: iso(T2) }), hash: "tdash" });
+    await wait(1500);
+    const pg = app.page();
+    check("posted message shown with Edit and Remove", pg.includes("Students see now") && pg.includes('data-act="editmsg"') && pg.includes('data-act="clearmsg"'));
+    check("new-message box starts empty", /<textarea[^>]*id="msg"[^>]*><\/textarea>/.test(pg));
+    app.click("editmsg"); await wait(200);
+    check("Edit puts the message in the box", /<textarea[^>]*id="msg"[^>]*>Bring your Bible<\/textarea>/.test(app.page()));
+  },
+
+  async "Student home: meeting time is labelled as class info"() {
+    const app = start({ server: student({ classes: [klass({ meet: "Mondays 7pm", message: "Hi there" })] }) });
+    await wait(1500);
+    check("labelled Class meets", app.page().includes("Class meets") && app.page().includes("Mondays 7pm") && !app.page().includes("We meet:"));
   },
 
   async "Notifications: which teacher actions notify the class"() {
