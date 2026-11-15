@@ -1765,6 +1765,13 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     },
     postmsg: function () {
       var tx = (S.draft.msg || "").trim(); S.settings = Object.assign({}, S.settings, { message: tx, mts: tx ? Date.now() : 0 }); S.draft.msg = ""; saveSettings(); toast(tx ? "Posted to your class." : "Cleared."); render();
+      if (tx && S.classId && CFG.url) {
+        fetch(CFG.url + "/functions/v1/send-push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: tx, class_id: S.classId })
+        }).catch(function () {});
+      }
     },
     clearmsg: function () { S.draft.msg = ""; S.settings = Object.assign({}, S.settings, { message: "", mts: 0 }); saveSettings(); render(); },
     createinvite: async function () {
@@ -1834,9 +1841,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         if ("Notification" in window && Notification.permission === "default") {
           Notification.requestPermission().then(function (p) {
             if (p !== "granted") { t.checked = false; store("dc_remind", null); }
-            else { store("dc_remind", "1"); }
+            else { store("dc_remind", "1"); subscribePush(); }
           });
-        } else { store("dc_remind", "1"); }
+        } else { store("dc_remind", "1"); subscribePush(); }
       } else { store("dc_remind", null); }
     }
   };
@@ -2601,7 +2608,42 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     }
   })();
 
-  boot();
+  /* push notification subscription for teacher messages */
+  var VAPID_PUBLIC = "BD4BnwcWPoL1QqB-NKitK4KMhHce5AjtlqgVoXZ-Rb8PUx5y_v67zzbVdp2t4Oh3Cvud0G4IuKZEUh46_WUpveQ";
+  function urlB64ToUint8(base64String) {
+    var padding = "=".repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    var rawData = atob(base64);
+    var arr = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; i++) arr[i] = rawData.charCodeAt(i);
+    return arr;
+  }
+  function subscribePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+    if (!S.classId || S.isTeacher) return;
+    if (Notification.permission !== "granted") return;
+    navigator.serviceWorker.ready.then(function (reg) {
+      reg.pushManager.getSubscription().then(function (existing) {
+        if (existing) { savePushSub(existing); return; }
+        reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlB64ToUint8(VAPID_PUBLIC)
+        }).then(function (sub) { savePushSub(sub); }).catch(function () {});
+      });
+    });
+  }
+  function savePushSub(sub) {
+    if (!sb || !S.classId) return;
+    var key = sub.toJSON();
+    sb.from("push_subscriptions").upsert({
+      endpoint: key.endpoint,
+      keys_p256dh: key.keys.p256dh,
+      keys_auth: key.keys.auth,
+      class_id: S.classId
+    }, { onConflict: "endpoint" }).then(function () {}).catch(function () {});
+  }
+
+  boot().then(function () { subscribePush(); });
 })();
 </script>
 

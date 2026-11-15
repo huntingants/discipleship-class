@@ -7,6 +7,28 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
+self.addEventListener("push", (e) => {
+  if (!e.data) return;
+  try {
+    const d = e.data.json();
+    e.waitUntil(
+      self.registration.showNotification(d.title || "Discipleship Class", {
+        body: d.body || "",
+        icon: "icons/icon-192.png",
+        badge: "icons/icon-192.png",
+        data: { url: d.url || "/" }
+      })
+    );
+  } catch (err) {}
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = e.notification.data && e.notification.data.url ? e.notification.data.url : "/";
+  e.waitUntil(clients.matchAll({ type: "window" }).then((cl) => {
+    for (const c of cl) { if (c.url.includes(self.location.origin) && "focus" in c) return c.focus(); }
+    return clients.openWindow(url);
+  }));
+});
 self.addEventListener("fetch", (e) => {
   const r = e.request;
   if (r.method !== "GET") return;
