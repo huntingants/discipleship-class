@@ -31,7 +31,7 @@ function el() {
 function start(opt) {
   const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
   const server = opt.server || {}, uid = opt.uid || "u1";
-  const writes = [], fetched = [], invokes = [], subs = [], listeners = [], counts = {};
+  const writes = [], rpcCalls = [], signOuts = [], fetched = [], invokes = [], subs = [], listeners = [], counts = {};
 
   function builder(table) {
     counts[table] = (counts[table] || 0) + 1;
@@ -57,10 +57,10 @@ function start(opt) {
   const rpcDefaults = { my_attendance: { mine: [], held: [] }, my_groups: [], class_roster: [], is_app_admin: false };
   const sb = {
     from: builder,
-    rpc: (n) => Promise.resolve({ data: opt.rpc && n in opt.rpc ? opt.rpc[n] : (n in rpcDefaults ? rpcDefaults[n] : null), error: null }),
+    rpc: (n, a) => { rpcCalls.push(n); const err = opt.rpcError && opt.rpcError[n]; return Promise.resolve({ data: opt.rpc && n in opt.rpc ? opt.rpc[n] : (n in rpcDefaults ? rpcDefaults[n] : null), error: err ? { message: err } : null }); },
     auth: {
       getSession: () => Promise.resolve({ data: { session: opt.signedIn === false ? null : { user: { id: uid, email: "user@example.test" }, access_token: "test" } } }),
-      onAuthStateChange() {}, signOut: () => Promise.resolve({})
+      onAuthStateChange() {}, signOut: () => { signOuts.push(1); return Promise.resolve({}); }
     },
     functions: { invoke: (n, o) => { invokes.push(o.body.kind); return Promise.resolve({ data: { sent: 2 } }); } },
     realtime: { setAuth() {} },
@@ -73,7 +73,7 @@ function start(opt) {
   };
 
   const ls = new Map(Object.entries(opt.local || {}));
-  const storage = { getItem: (k) => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: (k) => ls.delete(k) };
+  const storage = { getItem: (k) => (ls.has(k) ? ls.get(k) : null), setItem: (k, v) => ls.set(k, String(v)), removeItem: (k) => ls.delete(k), key: (i) => Array.from(ls.keys())[i] || null, get length() { return ls.size; } };
   const els = {}, on = {};
   const ctx = {
     console, setTimeout, clearTimeout, setInterval: () => 0, clearInterval() {}, Promise, JSON, Math, Date, Object, Array, String, Number,
@@ -103,7 +103,7 @@ function start(opt) {
   vm.runInContext(appScript(html), ctx, { filename: "index.html (app script)" });
 
   return {
-    writes, fetched, invokes, subs, counts, storage, ls,
+    writes, rpcCalls, signOuts, fetched, invokes, subs, counts, storage, ls,
     page: () => (els.app ? els.app.innerHTML : ""),
     toast: () => (els.toast ? els.toast.textContent : ""),
     click(act, attrs) { on.click({ target: { closest: (sel) => sel === "[data-act]" ? { getAttribute: (k) => k === "data-act" ? act : (attrs || {})[k] } : null }, preventDefault() {} }); },

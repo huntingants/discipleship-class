@@ -19,7 +19,7 @@ self.addEventListener("notificationclick", (e) => {
     return self.clients.openWindow(target);
   }));
 });
-const CORE = ["./", "index.html", "config.js", "supabase.js", "591.supabase.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/badge-96.png", "ss4-latin.woff2", "ss4-latin-i.woff2"];
+const CORE = ["./", "index.html", "privacy.html", "config.js", "supabase.js", "591.supabase.js", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png", "icons/badge-96.png", "ss4-latin.woff2", "ss4-latin-i.woff2"];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(V).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
 });

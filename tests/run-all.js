@@ -100,6 +100,30 @@ const tests = {
     check("nothing downloaded before sign-in", app.fetched.length === 0, JSON.stringify(app.fetched));
   },
 
+  async "Account: a student can delete their account (two taps), teachers cannot"() {
+    const app = start({ server: student(), hash: "sme", local: { ["dc_prof_" + UID]: "{}", ["dc_j_" + UID]: "{}", ["dc_theme"]: "dark" } });
+    const teach = start({ server: teacher(), hash: "tset" });
+    await wait(1500);
+    check("student sees Delete my account and a privacy link", app.page().includes('data-act="delacct"') && app.page().includes('href="privacy.html"'));
+    check("teacher does not see Delete my account", !teach.page().includes('data-act="delacct"'));
+    app.click("delacct");
+    check("first tap only asks to confirm", /Tap again to delete/.test(app.page()) && !app.rpcCalls.includes("delete_my_account"));
+    app.click("delacct");
+    await wait(600);
+    check("second tap calls delete_my_account once", app.rpcCalls.filter((n) => n === "delete_my_account").length === 1, JSON.stringify(app.rpcCalls));
+    check("signed out afterwards and sign-in screen shown", app.signOuts.length >= 1 && /Sign in/i.test(app.page()));
+    check("this person's saved data removed from the phone, theme kept", !Array.from(app.ls.keys()).some((k) => k.includes(UID)) && app.ls.get("dc_theme") === "dark", JSON.stringify(Array.from(app.ls.keys())));
+  },
+
+  async "Account: a failed deletion keeps the student signed in"() {
+    const app = start({ server: student(), hash: "sme", rpcError: { delete_my_account: "network" } });
+    await wait(1500);
+    app.click("delacct"); app.click("delacct");
+    await wait(600);
+    check("still on the Me page after an error", app.page().includes('data-act="delacct"') && app.signOuts.length === 0);
+    check("a clear message is shown", /Could not delete your account/.test(app.toast()), app.toast());
+  },
+
   async "Admin: only the app admin sees Invite a teacher"() {
     const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true } });
     const other = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: false } });

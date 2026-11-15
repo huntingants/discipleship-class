@@ -292,6 +292,7 @@ h1 { font-family: var(--sans); font-weight: 700; font-size: 1.85rem; line-height
 h2.sub { font-family: var(--sans); font-size: 1.25rem; line-height: 1.2; margin: 1.8rem 0 .8rem; }
 .lede { color: var(--muted); margin: 0 0 .6rem; font-size: .95rem; }
 .small { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+.small a { color: var(--gold-text); font-weight: 700; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 1.3rem; padding: 1rem 1.1rem; margin: 0 0 .9rem; box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03); transition: box-shadow .2s, transform .2s; }
 .card h3 { font-family: var(--sans); font-size: 1.05rem; margin: 0 0 .5rem; line-height: 1.25; }
 .card > :last-child { margin-bottom: 0; }
@@ -1306,12 +1307,14 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += '<form class="card" data-form="auth" novalidate>' + f +
       (m !== "forgot" ? '<label class="chk"><input type="checkbox" data-chg="showpw"' + (a.show ? " checked" : "") + "> Show password</label>" : "") +
       '<button class="btn primary block" type="submit"' + (a.busy ? " disabled" : "") + ' style="margin-top:.6rem">' + (a.busy ? "One moment…" : btn) + "</button></form>" + links;
-    h += '<p class="small" style="text-align:center;margin-top:1.4rem">Your teacher sees your name and your progress. Your journal stays private unless you share an entry.</p>';
+    h += '<p class="small" style="text-align:center;margin-top:1.4rem">Your teacher sees your name and your progress. Your journal stays private unless you share an entry. <a href="privacy.html">Privacy</a></p>';
     return h;
   }
   function accountCard() {
     return '<div class="card"><span class="k">Your account</span><p class="small" style="margin:0 0 .8rem">Signed in as <b>' + esc(S.email) + "</b></p>" +
-      '<button class="btn block" type="button" data-act="signout">Sign out</button></div>';
+      '<button class="btn block" type="button" data-act="signout">Sign out</button>' +
+      (!S.isTeacher && !S.preview ? '<button class="btn ghost block" type="button" data-act="delacct" style="margin-top:.6rem">' + (S.confirmAcct ? "This deletes everything and cannot be undone. Tap again to delete" : "Delete my account") + "</button>" : "") +
+      '<p class="small" style="margin:.8rem 0 0"><a href="privacy.html">Privacy: what the app keeps</a></p></div>';
   }
   function siteUrl() { return location.origin + location.pathname.replace(/index\.html$/, ""); }
   function joinCard() {
@@ -2040,6 +2043,19 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       var m = S.auth.mode; if (S.auth.busy) return;
       if (m === "signin") doSignIn(); else if (m === "student" || m === "teacher" || m === "leader") doSignUp(); else if (m === "forgot") doForgot(); else doReset();
     },
+    delacct: function () {
+      if (S.isTeacher || S.preview || S.acctBusy) return;
+      if (!S.confirmAcct) { S.confirmAcct = true; render(); setTimeout(function () { if (S.confirmAcct) { S.confirmAcct = false; render(); } }, 6000); return; }
+      S.confirmAcct = false; S.acctBusy = true;
+      var uid = S.uid;
+      sb.rpc("delete_my_account").then(function (r) {
+        S.acctBusy = false;
+        if (r.error) { toast("Could not delete your account. Check your connection and try again."); render(); return; }
+        try { var ks = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("dc_") === 0 && k.indexOf(uid) !== -1) ks.push(k); } ks.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {}
+        var fin = function () { try { sb.auth.signOut().then(function () {}, function () {}); } catch (e) {} resetState(); toast("Your account has been deleted."); };
+        if (S.push.on) { S.push.on = false; pushOffHere().then(fin, fin); } else fin();
+      }, function () { S.acctBusy = false; toast("Could not delete your account. Check your connection and try again."); render(); });
+    },
     signout: function () {
       var out = function () { try { sb.auth.signOut().then(function () {}, function () {}); } catch (e) {} resetState(); };
       if (S.push.on) { S.push.on = false; pushOffHere().then(out, out); } else out();
@@ -2525,7 +2541,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   }
   async function switchTo(cid) {
     S.classId = cid; S.cls = null; S.settings = undefined; S.sel = null; S.draft.set = null; S.draft.msg = "";
-    S.confirmWeek = 0; S.confirmMat = null; S.confirmDel = null; S.showNew = false; S.confirmRm = null;
+    S.confirmWeek = 0; S.confirmMat = null; S.confirmDel = null; S.showNew = false; S.confirmRm = null; S.confirmAcct = false;
     S.roster = {}; S.attendance = {}; S.prayerT = {}; S.wall = {}; S.shares = {}; S.preps = {}; S.prayed = {}; S.leaders = []; S.notes = []; S.attOpen = false; S.attW = 0;
     go("tdash"); render();
     try { await loadClass(); await applyMat(); await loadTeacherData(); await loadGroups(); } catch (e) { failSave(e); }
