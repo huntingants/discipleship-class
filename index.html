@@ -723,7 +723,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* crash reports: send a short note about unexpected errors so the app admin can see them.
      No names, notes or journal text are sent: only the error message, where it happened and the browser. */
-  var APP_VER = "dc-v14", errSent = {}, errCount = 0;
+  var APP_VER = "dc-v15", errSent = {}, errCount = 0;
   function reportError(msg, src) {
     try {
       msg = String(msg || "").slice(0, 500);
@@ -858,13 +858,19 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (!online()) return;
     later("journal", pushJournal, 900);
   }
-  function saveSettings() {
+  /* saves only the fields this action changed, so two leaders (or two devices) never undo each other's changes */
+  function saveSettings(fields) {
     if (!sb || !S.isTeacher || !S.classId) return Promise.resolve();
-    var s = S.settings;
+    var s = S.settings, row = {};
     if (S.cls && S.cls.week !== s.week) { s.checkin = false; S.cls.week = s.week; S.cls.checkin_open = false; }
-    return chain("settings", function () {
-      return sb.from("classes").update({ name: s.name || "Discipleship Class", meet: s.meet || "", week: s.week || 1, ahead: !!s.ahead, message: s.message || "", message_at: s.mts ? iso(s.mts) : null }).eq("id", S.classId).then(ck);
+    fields.forEach(function (f) {
+      if (f === "name") row.name = s.name || "Discipleship Class";
+      else if (f === "meet") row.meet = s.meet || "";
+      else if (f === "week") row.week = s.week || 1;
+      else if (f === "ahead") row.ahead = !!s.ahead;
+      else if (f === "message") { row.message = s.message || ""; row.message_at = s.mts ? iso(s.mts) : null; }
     });
+    return chain("settings", function () { return sb.from("classes").update(row).eq("id", S.classId).then(ck); });
   }
   function saveCheckin(on) {
     if (!sb || !S.isTeacher || !S.classId) return Promise.resolve();
@@ -1559,6 +1565,15 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   S.push = { on: false, busy: false };
   function pushSupported() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window && !!CFG.push; }
   function b64u(s) { var p = "=".repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, "+").replace(/_/g, "/")), a = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a; }
+  /* a phone may hold a sign-up made with another app's key (e.g. an old copy of this app); our server cannot send to it */
+  function keyOk(sub) {
+    try {
+      var k = sub.options && sub.options.applicationServerKey; if (!k) return true;
+      var a = new Uint8Array(k), b = b64u(CFG.push); if (a.length !== b.length) return false;
+      for (var i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+      return true;
+    } catch (e) { return true; }
+  }
   function pushSave(sub) {
     var j = sub.toJSON();
     return sb.rpc("save_push_sub", { p_endpoint: j.endpoint, p_key: j.keys.p256dh, p_auth: j.keys.auth }).then(ck);
@@ -1567,6 +1582,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function checkPush() {
     if (!pushSupported() || S.isTeacher || !S.session) return;
     navigator.serviceWorker.ready.then(function (reg) { return reg.pushManager.getSubscription(); }).then(function (sub) {
+      if (sub && !keyOk(sub)) {
+        sb.rpc("remove_push_sub", { p_endpoint: sub.endpoint }).then(function () {}, function () {});
+        sub.unsubscribe().catch(function () {}); sub = null;
+      }
       S.push.on = !!sub && Notification.permission === "granted"; S.push.known = true;
       if (S.push.on) pushSave(sub).catch(function () {});
       requestRender();
@@ -1586,6 +1605,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     sb.functions.invoke("notify", { body: { kind: kind } }).then(function (r) {
       var n = r && r.data && r.data.sent;
       if (n && kind === "message" && S.settings) { S.notified = { mts: S.settings.mts, n: n }; requestRender(); }
+      if (n === 0 && r.data && !r.data.skipped) setTimeout(function () { toast("No student phones have notifications on yet, so nobody got a notification."); }, 1600);
       if (n) setTimeout(function () { toast(n === 1 ? "1 phone was notified." : n + " phones were notified."); }, 1600);
     }, function () {});
   }
@@ -1650,14 +1670,6 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function attKey(w) { return "w" + w; }
   function presentIn(w) { var a = S.attendance[attKey(w)]; return (a && a.present) || {}; }
   function dbNote() { return S.offline ? '<div class="card warn"><span class="k">You are offline</span><p class="small" style="margin:0">Lessons and the class timer still work. Student progress will update when you are back online.</p></div>' : ""; }
-  function vSetup() {
-    var d = S.draft.set || (S.draft.set = { name: "", meet: "", week: 1, ahead: false });
-    return '<div class="hero"><p class="eyebrow">Teacher</p><h1>Set up your class</h1><p class="lede">This takes a minute. You can change everything later.</p></div>' + dbNote() +
-      '<div class="card"><div class="field"><label class="f" for="cn">Class name</label><input type="text" id="cn" data-bind="sname" value="' + esc(d.name) + '" placeholder="Wednesday evening group" maxlength="60"></div>' +
-      '<div class="field"><label class="f" for="cm">When and where do you meet?</label><input type="text" id="cm" data-bind="smeet" value="' + esc(d.meet) + '" placeholder="Wednesdays 7pm, Room 2" maxlength="80"></div>' +
-      '<div class="field"><label class="f" for="cw">Which lesson are you starting with?</label>' + weekSelect("cw", "sweek", d.week) + '</div>' +
-      '<button class="btn primary block" type="button" data-act="setup"' + (S.db ? "" : " disabled") + '>Create my class</button></div>';
-  }
   function weekSelect(id, bind, val) {
     var o = ""; for (var n = 1; n <= TOTAL; n++) o += '<option value="' + n + '"' + (n === +val ? " selected" : "") + ">Lesson " + n + ": " + esc(LESSONS[n - 1].title) + "</option>";
     return '<select id="' + id + '" data-chg="' + bind + '">' + o + "</select>";
@@ -1964,22 +1976,17 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       saveMe({ prayers: true }); render();
     },
     /* teacher */
-    setup: function () {
-      var d = S.draft.set; if (!S.db) { toast("Open this page while signed in to save your class."); return; }
-      S.settings = { name: (d.name || "").trim() || "Discipleship Class", meet: (d.meet || "").trim(), week: +d.week || 1, ahead: false, message: "", mts: 0, created: Date.now() };
-      S.draft.set = null; saveSettings(); render();
-    },
     savesettings: function () {
       var d = S.draft.set; if (!d) return;
       S.settings = Object.assign({}, S.settings, { name: (d.name || "").trim() || "Discipleship Class", meet: (d.meet || "").trim(), week: +d.week || 1, ahead: !!d.ahead });
-      saveSettings(); toast("Settings saved."); render();
+      saveSettings(["name", "meet", "week", "ahead"]); toast("Settings saved."); render();
     },
     week: function (t) {
       var n = +t.getAttribute("data-n");
       if (S.confirmWeek !== n) { S.confirmWeek = n; render(); setTimeout(function () { if (S.confirmWeek === n) { S.confirmWeek = 0; render(); } }, 4000); return; }
       var was = weekN();
       S.confirmWeek = 0; S.settings = Object.assign({}, S.settings, { week: n }); S.draft.set = null;
-      saveSettings().then(function (ok) { if (ok && n > was) notifyClass("lesson"); });
+      saveSettings(["week"]).then(function (ok) { if (ok && n > was) notifyClass("lesson"); });
       toast("The class is now on Lesson " + n + "."); render();
     },
     att: function (t) {
@@ -2018,10 +2025,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       S.draft.msg = "";
       if (tx === cur) { toast("This message is already posted."); render(); return; }
       S.settings = Object.assign({}, S.settings, { message: tx, mts: Date.now() });
-      saveSettings().then(function (ok) { if (ok) notifyClass("message"); });
+      saveSettings(["message"]).then(function (ok) { if (ok) notifyClass("message"); });
       toast("Posted to your class."); render();
     },
-    clearmsg: function () { S.settings = Object.assign({}, S.settings, { message: "", mts: 0 }); saveSettings(); toast("Message removed."); render(); },
+    clearmsg: function () { S.settings = Object.assign({}, S.settings, { message: "", mts: 0 }); saveSettings(["message"]); toast("Message removed."); render(); },
     editmsg: function () {
       S.draft.msg = (S.settings && S.settings.message) || ""; render();
       setTimeout(function () { var b = document.getElementById("msg"); if (b && b.focus) { b.focus(); try { b.setSelectionRange(b.value.length, b.value.length); } catch (e) {} } }, 50);
@@ -2127,7 +2134,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         if (p !== "granted") return done("Notifications were not allowed.");
         return navigator.serviceWorker.ready.then(function (reg) {
           return reg.pushManager.getSubscription().then(function (old) {
-            return old || reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.push) });
+            if (old && keyOk(old)) return old;
+            return (old ? old.unsubscribe().catch(function () {}) : Promise.resolve()).then(function () {
+              return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(CFG.push) });
+            });
           });
         }).then(pushSave).then(function () {
           S.push.on = true; done("Notifications are on.");

@@ -62,7 +62,7 @@ function start(opt) {
       getSession: () => Promise.resolve({ data: { session: opt.signedIn === false ? null : { user: { id: uid, email: "user@example.test" }, access_token: "test" } } }),
       onAuthStateChange() {}, signOut: () => { signOuts.push(1); return Promise.resolve({}); }
     },
-    functions: { invoke: (n, o) => { invokes.push(o.body.kind); return Promise.resolve({ data: { sent: 2 } }); } },
+    functions: { invoke: (n, o) => { invokes.push(o.body.kind); return Promise.resolve({ data: opt.invokeResult || { sent: 2 } }); } },
     realtime: { setAuth() {} },
     channel() {
       const ch = { on(type, o, cb) { subs.push(o.table + (o.filter ? "[" + o.filter + "]" : "")); listeners.push([o.table, cb]); return ch; },
@@ -99,11 +99,24 @@ function start(opt) {
     }
   };
   ctx.window = ctx; ctx.self = ctx; ctx.supabase = { createClient: () => sb };
+  // opt.push = { subKey: "<base64url key the phone signed up with>" | null }: a phone that supports notifications
+  const pushLog = [];
+  if (opt.push) {
+    const KEY = "BNbtNPFAIURJ-G0nkRshn8kkW-SjFDGSH-GK-8ts2xfINVQpw-zKdy2-mtKmBWPGkwpMgL0VQvnoDKCN8ScXEjc";
+    const bytes = (k) => Uint8Array.from(Buffer.from(k.replace(/-/g, "+").replace(/_/g, "/"), "base64")).buffer;
+    let sub = opt.push.subKey ? { endpoint: "https://fcm.googleapis.com/x", options: { applicationServerKey: bytes(opt.push.subKey) },
+      toJSON: () => ({ endpoint: "https://fcm.googleapis.com/x", keys: { p256dh: "p", auth: "a" } }), unsubscribe: () => { pushLog.push("unsubscribe"); sub = null; return Promise.resolve(true); } } : null;
+    const reg = { pushManager: { getSubscription: () => Promise.resolve(sub), subscribe: (o) => { pushLog.push("subscribe"); sub = { endpoint: "https://fcm.googleapis.com/new", options: o, toJSON: () => ({ endpoint: "https://fcm.googleapis.com/new", keys: { p256dh: "p", auth: "a" } }), unsubscribe: () => Promise.resolve(true) }; return Promise.resolve(sub); } } };
+    ctx.DC_CONFIG = { url: "https://x.supabase.co", key: "k", push: KEY };
+    ctx.PushManager = function () {}; ctx.Notification = { permission: "granted", requestPermission: () => Promise.resolve("granted") };
+    ctx.navigator.serviceWorker = { ready: Promise.resolve(reg), register: () => Promise.resolve(reg), addEventListener() {}, controller: null };
+  }
   vm.createContext(ctx);
   vm.runInContext(appScript(html), ctx, { filename: "index.html (app script)" });
 
   return {
     writes, rpcCalls, rpcs, signOuts, fetched, invokes, subs, counts, storage, ls,
+    pushLog,
     fire(type, ev) { (winOn[type] || []).forEach((f) => f(ev)); },
     page: () => (els.app ? els.app.innerHTML : ""),
     toast: () => (els.toast ? els.toast.textContent : ""),

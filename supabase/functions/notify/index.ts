@@ -94,11 +94,13 @@ Deno.serve(async (req) => {
     else {
       failed++;
       const code = (r.reason as { statusCode?: number })?.statusCode;
-      if (code === 404 || code === 410) gone.push(subs[i].endpoint); // that phone turned notifications off or was reset
+      // 404/410: that phone turned notifications off or was reset.
+      // 401/403: the sign-up was made with another app's key, so we can never send to it.
+      if (code === 404 || code === 410 || code === 401 || code === 403) gone.push(subs[i].endpoint);
     }
   });
   if (gone.length) await db.from("push_subs").delete().in("endpoint", gone);
-  await db.from("push_log").insert({ class_id: classId, kind, sent_by: uid, recipients: sent });
+  await db.from("push_log").insert({ class_id: classId, kind, sent_by: uid, recipients: sent, failed });
 
   return json({ sent, failed, removed: gone.length });
 });

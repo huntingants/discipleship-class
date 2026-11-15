@@ -143,7 +143,7 @@ const tests = {
     app.fire("unhandledrejection", { reason: new Error("lost promise") });
     const s = sent();
     check("two different errors sent, repeats and noise skipped", s.length === 2, JSON.stringify(s.map((r) => r.args.p_msg)));
-    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v14", JSON.stringify(s[0] && s[0].args));
+    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v15", JSON.stringify(s[0] && s[0].args));
     for (let i = 0; i < 20; i++) app.fire("error", { message: "e" + i });
     check("at most 10 reports per visit", sent().length === 10, String(sent().length));
     const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true, recent_client_errors: [{ at: iso(T2), msg: "<b>bad</b>", page: "#shome", agent: "Phone", ver: "dc-v11", signed_in: true }] } });
@@ -184,6 +184,33 @@ const tests = {
     const app = start({ server: student({ classes: [klass({ meet: "Mondays 7pm", message: "Hi there" })] }) });
     await wait(1500);
     check("labelled Class meets", app.page().includes("Class meets") && app.page().includes("Mondays 7pm") && !app.page().includes("We meet:"));
+  },
+
+  async "Settings: each action saves only what it changed (two leaders do not undo each other)"() {
+    const app = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tdash" });
+    await wait(1500);
+    app.type("msg", "Hello class"); app.click("postmsg"); await wait(200);
+    app.click("week", { "data-n": "2" }); app.click("week", { "data-n": "2" }); await wait(300);
+    const ups = app.writes.filter((w) => w.table === "classes").map((w) => Object.keys(w.payload).sort().join(","));
+    check("message save sends only the message", ups[0] === "message,message_at", JSON.stringify(ups));
+    check("moving the class sends only the week", ups[1] === "week", JSON.stringify(ups));
+  },
+
+  async "Notifications: a phone signed up with another app's key is signed up again"() {
+    const bad = start({ server: student(), push: { subKey: "BD4BnwcWPoL1QqB-NKitK4KMhHce5AjtlqgVoXZ-Rb8PUx5y_v67zzbVdp2t4Oh3Cvud0G4IuKZEUh46_WUpveQ" } });
+    const good = start({ server: student(), push: { subKey: "BNbtNPFAIURJ-G0nkRshn8kkW-SjFDGSH-GK-8ts2xfINVQpw-zKdy2-mtKmBWPGkwpMgL0VQvnoDKCN8ScXEjc" } });
+    await wait(1800);
+    check("wrong-key sign-up removed, not saved", bad.pushLog.includes("unsubscribe") && bad.rpcCalls.includes("remove_push_sub") && !bad.rpcCalls.includes("save_push_sub"), JSON.stringify([bad.pushLog, bad.rpcCalls]));
+    check("student is asked to turn notifications on again", bad.page().includes('data-act="pushasklater"'));
+    check("right-key sign-up kept and saved", !good.pushLog.length && good.rpcCalls.includes("save_push_sub") && !good.page().includes('data-act="pushasklater"'));
+  },
+
+  async "Notifications: teacher is told when no phone was notified"() {
+    const app = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tdash", invokeResult: { sent: 0 } });
+    await wait(1500);
+    app.type("msg", "Hi"); app.click("postmsg");
+    await wait(2500);
+    check("clear message that nobody was notified", /nobody got a notification/.test(app.toast()), app.toast());
   },
 
   async "Notifications: which teacher actions notify the class"() {
