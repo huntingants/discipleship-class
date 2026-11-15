@@ -71,6 +71,20 @@ const tests = {
     check("only the 13 KB Preparatory lessons downloaded", !app.fetched.includes("data/mat-disciple.json") && app.fetched.includes("data/mat-prep.json"), JSON.stringify(app.fetched));
   },
 
+  async "Lessons: after the last Preparatory Lesson the teacher can start the full course"() {
+    const last = start({ server: teacher({ material: "prep", week: 3 }), hash: "tdash" });
+    const mid = start({ server: teacher({ material: "prep", week: 2 }), hash: "tdash" });
+    const full = start({ server: teacher({ material: "disciple", week: 63 }), hash: "tdash" });
+    await wait(2500);
+    check("button shown on the last Preparatory Lesson", /start the Disciple Series/.test(last.page()));
+    check("not shown earlier in the Preparatory Lessons", !/start the Disciple Series/.test(mid.page()));
+    check("not shown in the full course", !/start the Disciple Series/.test(full.page()));
+    last.click("setmat", { "data-id": "disciple" }); last.click("setmat", { "data-id": "disciple" });
+    await wait(1500);
+    const up = last.writes.filter((w) => w.table === "classes" && w.op === "update").pop();
+    check("two taps switch the class to the Disciple Series", !!up && up.payload.material === "disciple", JSON.stringify(up));
+  },
+
   async "Lessons: no connection on a phone that never got them"() {
     const app = start({ server: teacher({ material: "prep" }), hash: "tset", blockFetch: /mat-/ });
     await wait(1500);

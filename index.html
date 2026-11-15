@@ -1623,7 +1623,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     h += '<h2 class="sub">Move the class</h2><div class="row">';
     if (w > 1) h += '<button class="btn" type="button" data-act="week" data-n="' + (w - 1) + '">' + (S.confirmWeek === w - 1 ? "Tap again to confirm" : "Back to Lesson " + (w - 1)) + "</button>";
     if (w < TOTAL) h += '<button class="btn primary" type="button" data-act="week" data-n="' + (w + 1) + '">' + (S.confirmWeek === w + 1 ? "Tap again to confirm" : "On to Lesson " + (w + 1)) + "</button>";
-    return h + '</div><p class="small">Moving the class opens the next lesson for your students.</p>';
+    var toFull = MAT.id === "prep" && w >= TOTAL && matById("disciple");
+    if (toFull) h += '<button class="btn primary" type="button" data-act="setmat" data-id="disciple">' + (S.confirmMat === "disciple" ? "Tap again to switch" : "Preparatory lessons done: start the Disciple Series") + "</button>";
+    return h + '</div><p class="small">' + (toFull ? "This is the last preparatory lesson. Starting the Disciple Series begins the full course at Lesson 1; the preparatory lessons stay saved." : "Moving the class opens the next lesson for your students.") + "</p>";
   }
   function vTeacherPlan() {
     var w = weekN();
