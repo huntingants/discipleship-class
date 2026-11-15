@@ -143,7 +143,7 @@ const tests = {
     app.fire("unhandledrejection", { reason: new Error("lost promise") });
     const s = sent();
     check("two different errors sent, repeats and noise skipped", s.length === 2, JSON.stringify(s.map((r) => r.args.p_msg)));
-    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v12", JSON.stringify(s[0] && s[0].args));
+    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v13", JSON.stringify(s[0] && s[0].args));
     for (let i = 0; i < 20; i++) app.fire("error", { message: "e" + i });
     check("at most 10 reports per visit", sent().length === 10, String(sent().length));
     const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true, recent_client_errors: [{ at: iso(T2), msg: "<b>bad</b>", page: "#shome", agent: "Phone", ver: "dc-v11", signed_in: true }] } });
@@ -151,6 +151,23 @@ const tests = {
     check("admin sees the button", admin.page().includes('data-act="showerrors"'));
     admin.click("showerrors"); await wait(300);
     check("admin sees the report, safely escaped", admin.page().includes("&lt;b&gt;bad&lt;/b&gt;") && admin.page().includes("Phone"));
+  },
+
+  async "Message to the class: tapping Post again keeps the message and does not notify twice"() {
+    const app = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tdash" });
+    await wait(1500);
+    app.type("msg", "Bring your Bible"); app.click("postmsg");
+    await wait(300);
+    app.click("postmsg");                                    // tapped again without typing
+    await wait(300);
+    const saves = app.writes.filter((w) => w.table === "classes" && w.payload && "message" in w.payload).map((w) => w.payload.message);
+    check("message saved once and never wiped", JSON.stringify(saves) === '["Bring your Bible"]', JSON.stringify(saves));
+    check("still shown in the box", app.page().includes("Bring your Bible"));
+    await wait(2000);
+    check("class notified once", JSON.stringify(app.invokes) === '["message"]', JSON.stringify(app.invokes));
+    app.click("clearmsg"); await wait(300);
+    const last = app.writes.filter((w) => w.table === "classes" && w.payload && "message" in w.payload).pop();
+    check("Clear still clears", last && last.payload.message === "");
   },
 
   async "Notifications: which teacher actions notify the class"() {

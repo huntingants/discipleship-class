@@ -718,7 +718,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* crash reports: send a short note about unexpected errors so the app admin can see them.
      No names, notes or journal text are sent: only the error message, where it happened and the browser. */
-  var APP_VER = "dc-v12", errSent = {}, errCount = 0;
+  var APP_VER = "dc-v13", errSent = {}, errCount = 0;
   function reportError(msg, src) {
     try {
       msg = String(msg || "").slice(0, 500);
@@ -1992,9 +1992,15 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       toast("Removed from your class."); go("tpeople");
     },
     postmsg: function () {
-      var tx = (S.draft.msg || "").trim(); S.settings = Object.assign({}, S.settings, { message: tx, mts: tx ? Date.now() : 0 }); S.draft.msg = "";
-      saveSettings().then(function (ok) { if (ok && tx) notifyClass("message"); });
-      toast(tx ? "Posted to your class." : "Cleared."); render();
+      /* post what the box shows: the new text if it was edited, otherwise the message already there
+         (tapping Post again used to send an empty message and wipe it) */
+      var cur = (S.settings && S.settings.message) || "";
+      var tx = (S.draft.msg ? S.draft.msg : cur).trim(); S.draft.msg = "";
+      if (!tx) { toast("Type a message first."); return; }
+      if (tx === cur) { toast("This message is already posted."); render(); return; }
+      S.settings = Object.assign({}, S.settings, { message: tx, mts: Date.now() });
+      saveSettings().then(function (ok) { if (ok) notifyClass("message"); });
+      toast("Posted to your class."); render();
     },
     clearmsg: function () { S.draft.msg = ""; S.settings = Object.assign({}, S.settings, { message: "", mts: 0 }); saveSettings(); render(); },
     pick: function (t) { S.sel = t.getAttribute("data-id"); go("tperson"); },
