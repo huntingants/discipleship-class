@@ -132,6 +132,27 @@ const tests = {
     check("other teachers do not", other.page().includes("Class settings") && !other.page().includes('data-act="teacherinvite"'));
   },
 
+  async "Crash reports: an unexpected error is sent once, and only the admin can list them"() {
+    const app = start({ server: student() });
+    await wait(1200);
+    const sent = () => app.rpcs.filter((r) => r.name === "log_client_error");
+    app.fire("error", { message: "boom", filename: "http://localhost/index.html", lineno: 5, colno: 2, error: { stack: "at x" } });
+    app.fire("error", { message: "boom", filename: "http://localhost/index.html", lineno: 5, colno: 2 });
+    app.fire("error", {}); // a picture that failed to load
+    app.fire("error", { message: "Script error." });
+    app.fire("unhandledrejection", { reason: new Error("lost promise") });
+    const s = sent();
+    check("two different errors sent, repeats and noise skipped", s.length === 2, JSON.stringify(s.map((r) => r.args.p_msg)));
+    check("report has place and version, no hash values", s[0] && s[0].args.p_src.startsWith("/index.html:5:2") && s[0].args.p_ver === "dc-v12", JSON.stringify(s[0] && s[0].args));
+    for (let i = 0; i < 20; i++) app.fire("error", { message: "e" + i });
+    check("at most 10 reports per visit", sent().length === 10, String(sent().length));
+    const admin = start({ server: teacher(), hash: "tset", rpc: { is_app_admin: true, recent_client_errors: [{ at: iso(T2), msg: "<b>bad</b>", page: "#shome", agent: "Phone", ver: "dc-v11", signed_in: true }] } });
+    await wait(1500);
+    check("admin sees the button", admin.page().includes('data-act="showerrors"'));
+    admin.click("showerrors"); await wait(300);
+    check("admin sees the report, safely escaped", admin.page().includes("&lt;b&gt;bad&lt;/b&gt;") && admin.page().includes("Phone"));
+  },
+
   async "Notifications: which teacher actions notify the class"() {
     const app = start({ server: teacher({ week: 1, material: "disciple" }), hash: "tset" });
     await wait(1500);

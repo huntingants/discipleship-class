@@ -715,6 +715,27 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   var CFG = window.DC_CONFIG || {};
   var sb = null;
   try { sb = window.supabase.createClient(CFG.url, CFG.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } }); } catch (e) { sb = null; }
+
+  /* crash reports: send a short note about unexpected errors so the app admin can see them.
+     No names, notes or journal text are sent: only the error message, where it happened and the browser. */
+  var APP_VER = "dc-v12", errSent = {}, errCount = 0;
+  function reportError(msg, src) {
+    try {
+      msg = String(msg || "").slice(0, 500);
+      if (!sb || !msg || /^Script error\.?$/i.test(msg) || /ResizeObserver loop/i.test(msg)) return;
+      if (errSent[msg] || errCount >= 10) return;
+      errSent[msg] = 1; errCount++;
+      sb.rpc("log_client_error", { p_msg: msg, p_src: String(src || "").slice(0, 300), p_page: (location.hash || "#").split("=")[0].slice(0, 200), p_agent: navigator.userAgent.slice(0, 200), p_ver: APP_VER }).then(function () {}, function () {});
+    } catch (e) {}
+  }
+  window.addEventListener("error", function (ev) {
+    if (!ev || !ev.message) return; // a picture or file that failed to load, not a crash
+    reportError(ev.message, (ev.filename || "").replace(location.origin, "") + ":" + (ev.lineno || 0) + ":" + (ev.colno || 0) + (ev.error && ev.error.stack ? "\n" + ev.error.stack : ""));
+  });
+  window.addEventListener("unhandledrejection", function (ev) {
+    var r = ev && ev.reason;
+    reportError("Unhandled: " + (r && r.message ? r.message : String(r)), r && r.stack ? r.stack : "");
+  });
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) { var r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); });
@@ -1179,7 +1200,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     stopPoll(); Object.keys(timers).forEach(function (k) { clearTimeout(timers[k]); }); dirty = {};
     S.session = null; S.uid = null; S.email = ""; S.profile = null; S.cls = null; S.classId = null; S.isTeacher = false;
     S.settings = null; S.roster = {}; S.attendance = {}; S.prayerT = {}; S.wall = {}; S.shares = {};
-    S.me = blankMe(); S.journal = { entries: {} }; S.jdirty = {}; S.srvPrayers = {}; S.offline = false; S.failed = false; S.sel = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.att = { mine: [], held: [] }; S.vp = null; S.raw = null; S.dataMat = "disciple"; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null; S.isAdmin = false; S.lastInvite = ""; setMaterial("disciple");
+    S.me = blankMe(); S.journal = { entries: {} }; S.jdirty = {}; S.srvPrayers = {}; S.offline = false; S.failed = false; S.sel = null; S.prayed = {}; S.prep = {}; S.preps = {}; S.leaders = []; S.pdirty = {}; S.att = { mine: [], held: [] }; S.vp = null; S.raw = null; S.dataMat = "disciple"; S.groups = []; S.showNew = false; S.confirmDel = null; S.notes = []; S.attW = 0; S.attOpen = false; S.confirmNote = null; S.isAdmin = false; S.lastInvite = ""; S.errs = null; setMaterial("disciple");
     S.draft = { name: "", prayer: "", vis: "t", msg: "", addname: "", set: null };
     S.auth = { mode: "signin", email: "", pass: "", pass2: "", name: "", code: "", cname: "", invite: "", mat: "disciple", busy: false, err: "", info: "", show: false };
     try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
@@ -1799,7 +1820,16 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (!S.isAdmin) return "";
     return '<div class="card"><span class="k">App admin</span><p class="small">New teachers need an invite to start a class. Each invite works once. Co-leaders do not need one; they use the co-leader code.</p>' +
       (S.lastInvite ? '<p class="small" style="word-break:break-all">Latest invite code: <b>' + esc(S.lastInvite) + "</b></p>" : "") +
-      '<button class="btn block" type="button" data-act="teacherinvite">Invite a teacher</button></div>';
+      '<button class="btn block" type="button" data-act="teacherinvite">Invite a teacher</button>' +
+      '<p class="small" style="margin-top:1rem">App problems: when the app breaks on someone\'s device, a short note shows here (no names or notes).</p>' +
+      (S.errs == null ? '<button class="btn block" type="button" data-act="showerrors">See app problems</button>' :
+        !S.errs.length ? '<p class="small"><b>No problems in the last 30 days.</b></p>' :
+        S.errs.map(function (e) {
+          return '<div style="border-top:1px solid var(--line,#ddd);padding:.5rem 0"><p class="small" style="margin:0"><b>' + esc(new Date(e.at).toLocaleString()) + "</b> · " + esc(e.page || "#") + " · " + (e.signed_in ? "signed in" : "signed out") + " · " + esc(e.ver || "") + "</p>" +
+            '<p class="small" style="margin:.2rem 0;word-break:break-word">' + esc(e.msg) + "</p>" +
+            '<p class="small" style="margin:0;opacity:.7;word-break:break-word">' + esc(e.agent || "") + "</p></div>";
+        }).join("")) +
+      "</div>";
   }
 
   /* ---------- shell ---------- */
@@ -2084,6 +2114,12 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     copycode: function () {
       var c = S.cls && S.cls.join_code; if (!c) return;
       copyText(c).then(function () { toast("Code copied."); }, function () { toast("Your class code is " + c); });
+    },
+    showerrors: function () {
+      sb.rpc("recent_client_errors").then(function (r) {
+        if (r.error) return failSave(r.error);
+        S.errs = r.data || []; render();
+      }, failSave);
     },
     teacherinvite: function () {
       sb.rpc("create_teacher_invite").then(function (r) {

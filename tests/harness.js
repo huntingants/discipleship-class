@@ -31,7 +31,7 @@ function el() {
 function start(opt) {
   const html = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
   const server = opt.server || {}, uid = opt.uid || "u1";
-  const writes = [], rpcCalls = [], signOuts = [], fetched = [], invokes = [], subs = [], listeners = [], counts = {};
+  const writes = [], rpcCalls = [], rpcs = [], winOn = {}, signOuts = [], fetched = [], invokes = [], subs = [], listeners = [], counts = {};
 
   function builder(table) {
     counts[table] = (counts[table] || 0) + 1;
@@ -57,7 +57,7 @@ function start(opt) {
   const rpcDefaults = { my_attendance: { mine: [], held: [] }, my_groups: [], class_roster: [], is_app_admin: false };
   const sb = {
     from: builder,
-    rpc: (n, a) => { rpcCalls.push(n); const err = opt.rpcError && opt.rpcError[n]; return Promise.resolve({ data: opt.rpc && n in opt.rpc ? opt.rpc[n] : (n in rpcDefaults ? rpcDefaults[n] : null), error: err ? { message: err } : null }); },
+    rpc: (n, a) => { rpcCalls.push(n); rpcs.push({ name: n, args: a }); const err = opt.rpcError && opt.rpcError[n]; return Promise.resolve({ data: opt.rpc && n in opt.rpc ? opt.rpc[n] : (n in rpcDefaults ? rpcDefaults[n] : null), error: err ? { message: err } : null }); },
     auth: {
       getSession: () => Promise.resolve({ data: { session: opt.signedIn === false ? null : { user: { id: uid, email: "user@example.test" }, access_token: "test" } } }),
       onAuthStateChange() {}, signOut: () => { signOuts.push(1); return Promise.resolve({}); }
@@ -82,7 +82,7 @@ function start(opt) {
     location: { hash: opt.hash ? "#" + opt.hash : "", pathname: "/", search: "", origin: "http://localhost", host: "localhost" },
     history: { replaceState() {} }, navigator: { onLine: true, userAgent: "node", maxTouchPoints: 0 },
     matchMedia: () => ({ matches: false, addEventListener() {}, addListener() {} }),
-    scrollTo() {}, addEventListener() {}, removeEventListener() {}, requestAnimationFrame: (f) => setTimeout(f, 0),
+    scrollTo() {}, addEventListener(type, f) { (winOn[type] = winOn[type] || []).push(f); }, removeEventListener() {}, requestAnimationFrame: (f) => setTimeout(f, 0),
     crypto: { randomUUID: () => "id-" + Math.random().toString(36).slice(2) },
     fetch: (p) => {
       fetched.push(p);
@@ -103,7 +103,8 @@ function start(opt) {
   vm.runInContext(appScript(html), ctx, { filename: "index.html (app script)" });
 
   return {
-    writes, rpcCalls, signOuts, fetched, invokes, subs, counts, storage, ls,
+    writes, rpcCalls, rpcs, signOuts, fetched, invokes, subs, counts, storage, ls,
+    fire(type, ev) { (winOn[type] || []).forEach((f) => f(ev)); },
     page: () => (els.app ? els.app.innerHTML : ""),
     toast: () => (els.toast ? els.toast.textContent : ""),
     click(act, attrs) { on.click({ target: { closest: (sel) => sel === "[data-act]" ? { getAttribute: (k) => k === "data-act" ? act : (attrs || {})[k] } : null }, preventDefault() {} }); },
