@@ -35,7 +35,7 @@
   "isMetaQuest": false,
   "fullScopeUrl": "https://huntingants.github.io/discipleship-class/",
   "minSdkVersion": 21,
-  "orientation": "portrait",
+  "orientation": "default",
   "fingerprints": [],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
