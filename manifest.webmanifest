@@ -2,10 +2,11 @@
   "name": "Discipleship Class",
   "short_name": "Discipleship",
   "description": "A 63-week discipleship program: lessons, verses, journal and prayer.",
+  "id": "./",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#f6f3ea",
   "theme_color": "#16233a",
   "icons": [
