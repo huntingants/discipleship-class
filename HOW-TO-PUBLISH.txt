@@ -1,0 +1,153 @@
+DISCIPLESHIP CLASS: HOW TO PUT THIS ON THE INTERNET
+===================================================
+
+This folder is your whole app. Everything is already connected to your database.
+You only need to give it a web address. It takes about five minutes and costs nothing.
+
+STEP 1. Publish the folder (pick one)
+
+  Netlify (easiest)
+  1. Go to https://app.netlify.com/drop on a computer.
+  2. Drag this whole folder onto the page.
+  3. After a few seconds you get a link like https://something-random.netlify.app
+  4. Optional: in Netlify, open Site configuration, then Change site name, and pick a nicer name.
+
+  Cloudflare Pages (alternative)
+  1. Go to https://dash.cloudflare.com, then Workers & Pages, then Create, then Pages, then Upload assets.
+  2. Upload this folder and deploy.
+
+STEP 2. Two settings in your database (Supabase)
+  Open https://supabase.com/dashboard/project/sbfecjnffugvqwzgnnqn
+
+  a) Authentication, then Sign In / Providers, then Email:
+     turn OFF "Confirm email".
+     Without this, every new student must tap a link in an email before they can sign in,
+     and Supabase only sends a few of those emails per hour.
+
+  b) Authentication, then URL Configuration:
+     set "Site URL" to your new link from Step 1.
+     This makes the "Forgot password" email open your app.
+
+STEP 3. Start your class
+  1. Open your link on your phone.
+  2. Tap "I am a teacher" and make your account.
+  3. Your dashboard shows a 6-letter CLASS CODE. Tap "Send the invitation" to text it to students.
+  4. Students open the same link, tap "I have a class code", and make their own account.
+
+STEP 3b. A ten-minute test before the first class (please do this)
+  1. On your phone, make your teacher account.
+  2. On a second phone or a private browser window, join as a student with your class code.
+  3. As the student: read Lesson 1, tick a task, write a journal entry and tick "Share this with my teacher",
+     write an answer under "Talk it over", and add one prayer request shared with the class.
+  4. Back on your teacher account, open Today, People and Prayer. You should see the student, the entry, the answer and the request.
+  5. If something looks wrong, tell me exactly what the screen said.
+
+STEP 4. Put it on the home screen (it then opens like a normal app)
+  iPhone: open the link in Safari, tap Share, then Add to Home Screen.
+  Android: open the link in Chrome, tap the menu, then Install app (or Add to Home screen).
+
+WHAT IS NEW IN THIS VERSION
+  * Today: a "Not read yet" card with a Send a friendly reminder button. It opens your phone's share sheet
+    (Messenger, Viber, text) with the message already written. Each student's page has a message button too.
+  * Class tab: Backup (progress and attendance spreadsheets), a co-leader code, and "Make a new class code".
+  * Co-leaders: give them the co-leader code. They tap "I am joining as a co-leader" on the sign-in page.
+    They see the same class and can run lessons and take attendance.
+  * Student page: "Move to another class" (type the other class's code) and "Remove from my class".
+    A student with no class sees a Join a class box on their home screen and can type a new code.
+  * Students: "I prayed for this" on classmates' requests, with a count the owner can see; answers before class
+    (you can read them on the student's page); a Listen button on verses; a celebration after each finished phase;
+    Download my journal on the Journal page.
+
+ALSO NEW: ATTENDANCE CHECK-IN AND MEMORY VERSES
+  * Check-in: on the Today tab, tap Open check-in when class starts. Each student sees an "I'm here today" button
+    on their home screen and taps it. Their name ticks in "Who is here today?" by itself. You can still tap names.
+    Check-in closes by itself after four hours, and also when you move the class to the next lesson.
+  * Not here this week: names of anyone missing, with a Send a caring message button. Anyone who has missed more than
+    one class in a row is pointed out, because a personal call can mean more than a message.
+  * People tab: an Attendance record with a row of squares for each student. Students see their own record on Me.
+  * Memory verse: each week's verse has a Practice screen with five steps. Step 1 shows the verse, and each harder
+    step hides more words, down to first letters only. Tap a blank to peek. A Listen button reads it aloud.
+    "I can say it from memory" marks the verse as known. Known verses are listed on the Me tab to practise again.
+    Today shows how many students know this week's verse.
+  * One update needed: this version needs the two database changes already made on your Supabase project.
+    Nothing for you to do there. Just upload this folder to Netlify again (Deploys, then drag the folder in).
+
+ALSO NEW: "POWERED BY NETLIFY" BADGE NO LONGER COVERS THE MENU
+  If Netlify shows its small badge over the bottom corner, the app now notices and moves the menu icons up so
+  Prayer and Me stay tappable. To remove the badge itself, look in Netlify under Site configuration. On some
+  free plans it cannot be turned off, and the app works around it.
+
+ALSO NEW: SEVERAL GROUPS, ONE LOGIN (UP TO 10)
+  * Teachers: open the Class tab. "My groups" lists every group you lead with its material, lesson and student count.
+    Tap Add a group, give it a name, choose Disciple or OHB, and tap Create group. Each group has its own class code,
+    students, current lesson, attendance and material, so one group can be on Disciple Lesson 10 while another
+    is on OHB Lesson 3.
+  * Once you lead two or more groups, a Group box appears at the top of every teacher page. Pick a group there to
+    switch. Students never see your other groups.
+  * Delete this group (Class tab, only for the person who made it) removes the group, its attendance and its
+    messages. Its students stay in the app without a class and can join another group with a code.
+    You always keep at least one group.
+  * A co-leader joins one group with its co-leader code. If the person who made that group deletes it, the
+    co-leader is offered a new group of their own.
+  * One update needed: this version needs the database change already made on your Supabase project.
+    Upload this folder to Netlify again (Deploys, then drag the folder in).
+
+ALSO NEW: CHOOSE WHAT TO TEACH (DISCIPLE SERIES OR OHB SERIES)
+  * Teachers: open the Class tab. At the top is "Teaching material" with both series. Tap "Teach this" twice
+    to switch. The class restarts at Lesson 1 and check-in closes. A new teacher can also pick the material
+    when they start a class.
+  * Each student's progress, journal, verses and attendance are kept separately for each material.
+    Switching back to a material brings everything back exactly as it was.
+  * OHB Series: 48 lessons in four series (Salvation 1 to 12, Maturity 13 to 24, Discipleship 25 to 36,
+    Victorious Life 37 to 48). The teaching text keeps the OHB wording. The discussion questions come from
+    the PDFs' application questions. The weekly tasks, key question and memory verse were added for the app.
+    Scripture quotes show the World English Bible, not the NIV used in the PDFs.
+  * One update needed: this version needs the database change already made on your Supabase project.
+    Nothing to do there. Upload this folder to Netlify again (Deploys, then drag the folder in).
+
+HOW TO ADD ANOTHER MATERIAL LATER (for whoever builds the app)
+  1. Put the lessons in a JSON file with the same shape as ohb_lessons.json (numbered 1 to N).
+  2. Add an entry to app/materials.json: id, name, off (the next thousand: 2000, 3000), file, desc and phases.
+  3. Add one row to the materials table in Supabase (id, label, week_offset equal to off).
+  4. Run bible/mkdata.py (add the new file to its list) and app/mksite.py, then upload the site folder.
+
+FOLLOW-UP TOOLS FOR TEACHERS (new)
+  * Earlier weeks: on the Today page, under "Who is here today", tap "Take attendance for an earlier week".
+    Pick the class, tap the names of those who were there. It saves as you tap. Tap Done when finished.
+  * May need a call: on Today, the app lists students who seem to be slipping. That means they have not read
+    two of the last three lessons, missed the last two classes, or have not opened the app in two weeks.
+    New students are left out for their first one or two weeks. Tap a name to open that student.
+  * Private notes: open any student (People tab, tap the name). Write a note, and add a follow-up date if you
+    like. Notes are seen by you and co-leaders of the same class only. The student never sees them.
+    When a follow-up date arrives, the student appears under "Follow-ups due" on Today until you mark it done.
+  * Students see a gentle "Catch up" card on their home page if they missed a recent class or have not read
+    a recent lesson. It shows the last five lessons only, so nobody is buried by a long list.
+  * Add to Home Screen: students and teachers see a short hint with the steps for their phone. "Not now" hides it.
+
+KEEP THE FREE DATABASE AWAKE (do this once, takes about 5 minutes)
+  Supabase pauses a free project after about a week with nobody using it. The app has a tiny "ping" built in.
+  A free website can knock on it every day so the project never pauses.
+  1. Go to cron-job.org and make a free account.
+  2. Tap "Create cronjob". Title: Disciple keep-alive.
+  3. URL: https://sbfecjnffugvqwzgnnqn.supabase.co/rest/v1/rpc/ping
+  4. Schedule: every day (for example at 3:00 in the morning).
+  5. Open "Advanced". Under Headers, add one header.  Name: apikey   Value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNiZmVjam5mZnVndnF3emdubnFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ0NTcwNjUsImV4cCI6MjExMDAzMzA2NX0.oQoPq1FpzBUZgfZqyMM34d6Zz2Yh2loVewisuN7bxhI
+     (This is the same public key already inside config.js. It is safe to use here.)
+  6. Request method: GET. Save.
+  7. Tap "Test run". A good result shows status 200 and the word "ok".
+  If the test shows 401 or 403, check that the header name is exactly apikey and the key was pasted whole.
+
+CUSTOM WEB ADDRESS (optional)
+  Netlify: Domain management, then Add a domain. If you buy one (for example yourchurch.org), Netlify shows the steps.
+  After it works, set the same address as the Site URL in Supabase (Authentication, URL Configuration).
+
+GOOD TO KNOW
+  * Students see their own journal and nobody else's. Your dashboard shows names, lessons finished,
+    and only the journal entries a student chooses to share. Prayer requests marked "Only my teacher"
+    are visible to you only. Requests shared with the class are visible to classmates.
+  * Anyone can make a teacher account and start their own separate class. Classes never see each other.
+    Other pastors can use the same link for their own groups.
+  * Supabase's free plan pauses a project after about a week with no activity. The keep-alive step above
+    prevents this. If the app ever says it cannot reach the server, open the dashboard link above and tap Restore.
+  * To use a different database later, edit config.js (two values) and re-upload the folder.
+  * The Bible text is the World English Bible (public domain).
