@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Discipleship App — Animation Demo</title>
+<style>
+/* ═══════════════════════════════════════════
+   App Theme Variables (from the real app)
+   ═══════════════════════════════════════════ */
+:root {
+  --bg: #f4f1ec; --surface: #ffffff; --tint: #e8e4dd; --ink: #14141f; --muted: #6b6460;
+  --line: #ddd8d0; --navy: #1b3a5c; --on-navy: #ffffff; --gold: #c5922e; --gold-soft: #f0dca0;
+  --gold-text: #9e7520; --on-gold: #14141f; --on-soft: #14141f;
+  --ask-bg: #faf6ee; --ask-ink: #5c4a1e; --focus: #c5922e;
+  --ok: #2e7d32; --ok-bg: #e8f5e9; --over: #c62828; --over-bg: #ffd8d8;
+  --fs: 18px;
+  --serif: "Source Serif 4", "New York", Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+}
+:root[data-theme="dark"] {
+  --bg: #0c1520; --surface: #1a2d45; --tint: #243a54; --ink: #e8ecf0; --muted: #9aa8b8; --line: #2e4460;
+  --navy: #d4953a; --on-navy: #0c1520; --gold: #d4953a; --gold-soft: #e2b56e; --gold-text: #d4953a;
+  --on-gold: #14141f; --on-soft: #14141f;
+  --ask-bg: #1e3350; --ask-ink: #e8d4a8; --focus: #d4953a;
+  --ok: #30d158; --ok-bg: #173325; --over: #ff453a; --over-bg: #3a1f1b;
+  color-scheme: dark;
+}
+
+/* ═══════════════════════════════════════════
+   Base
+   ═══════════════════════════════════════════ */
+html { font-size: var(--fs); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--serif); font-size: 1rem; line-height: 1.65;
+  overflow-x: hidden; -webkit-font-smoothing: antialiased;
+}
+* { box-sizing: border-box; }
+button, input, textarea, select { font: inherit; color: inherit; }
+a, button, summary { -webkit-tap-highlight-color: transparent; }
+
+/* ═══════════════════════════════════════════
+   Demo Shell — the phone frame
+   ═══════════════════════════════════════════ */
+.demo-shell {
+  max-width: 26rem; margin: 0 auto; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+
+/* Top bar */
+.bar {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--navy); color: var(--on-navy);
+  padding: 0 1rem; flex-shrink: 0;
+}
+.bar-in { display: flex; align-items: center; gap: .5rem; min-height: 3rem; }
+.bar .tbtn {
+  font-family: var(--sans); font-weight: 600; font-size: .8rem;
+  background: transparent; border: 1.5px solid rgba(255,255,255,.4); color: var(--on-navy);
+  border-radius: 999px; height: 2.2rem; min-width: 2.2rem; padding: 0 .7rem;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: .3rem;
+}
+.bar .tbtn:active { background: rgba(255,255,255,.12); }
+.bar .where {
+  flex: 1; min-width: 0; font-family: var(--sans); font-size: .78rem; font-weight: 600;
+  text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .9;
+}
+
+/* Scrollable content area */
+.demo-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  padding: 0 1rem calc(4.2rem + 1rem);
+  scroll-behavior: smooth;
+}
+
+/* ═══════════════════════════════════════════
+   App Components (from real app)
+   ═══════════════════════════════════════════ */
+.hero { padding: 1.3rem 0 .5rem; }
+.eyebrow { font-family: var(--sans); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--gold-text); margin: 0 0 .4rem; }
+h1 { font-family: var(--sans); font-weight: 700; font-size: 1.55rem; line-height: 1.18; letter-spacing: -.01em; margin: 0 0 .4rem; }
+.lede { color: var(--muted); margin: 0; font-size: .88rem; }
+.k { display: block; font-family: var(--sans); font-size: .66rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold-text); margin-bottom: .2rem; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 1.1rem;
+  padding: .85rem 1rem; margin: 0 0 .7rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04), 0 4px 12px rgba(0,0,0,.03);
+}
+.card h3 { font-family: var(--sans); font-size: .95rem; margin: 0 0 .35rem; line-height: 1.25; }
+.card > :last-child { margin-bottom: 0; }
+.card p { margin: 0 0 .5rem; font-size: .9rem; }
+.card.navy { background: var(--navy); color: var(--on-navy); border-color: var(--navy); }
+.card.navy .eyebrow, .card.navy .k { color: var(--on-navy); opacity: .8; }
+.card.tint { background: var(--tint); border-color: transparent; }
+
+.btn {
+  font-family: var(--sans); font-weight: 700; font-size: .92rem; border-radius: .8rem;
+  border: 1.5px solid var(--ink); background: var(--surface); color: var(--ink);
+  min-height: 2.8rem; padding: .5rem 1rem; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  line-height: 1.2; text-align: center; text-decoration: none;
+}
+.btn.primary { background: var(--navy); color: var(--on-navy); border-color: var(--navy); }
+.btn.gold { background: var(--gold-soft); border-color: var(--gold-soft); color: var(--on-soft); }
+.btn.block { display: flex; width: 100%; }
+.btn.sm { min-height: 2.2rem; font-size: .82rem; padding: .3rem .75rem; border-radius: 999px; }
+.btn.ghost { border-color: var(--line); color: var(--muted); }
+.row { display: flex; gap: .5rem; flex-wrap: wrap; margin: 0 0 .7rem; }
+.row > .btn { flex: 1 1 8rem; }
+
+/* Progress */
+.pbar { height: .4rem; border-radius: 1rem; background: var(--tint); overflow: hidden; margin: .4rem 0; }
+.pbar-fill { height: 100%; border-radius: 1rem; background: var(--gold); width: 0; }
+
+/* Toast */
+.toast {
+  position: fixed; left: 50%; bottom: calc(4.2rem + .8rem);
+  transform: translate(-50%, 1rem) scale(.92);
+  background: var(--navy); color: var(--on-navy);
+  font-family: var(--sans); font-weight: 600; font-size: .82rem; line-height: 1.4;
+  padding: .6rem 1.1rem; border-radius: .8rem; max-width: min(85vw, 22rem);
+  opacity: 0; pointer-events: none; z-index: 40; text-align: center;
+  box-shadow: 0 8px 30px rgba(0,0,0,.18);
+  transition: opacity .28s ease, transform .35s cubic-bezier(.32,.72,0,1);
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+
+/* Skeleton */
+.skel-line { height: .85rem; border-radius: .3rem; background: var(--tint); margin: 0 0 .4rem; }
+.skel-circle { width: 2.2rem; height: 2.2rem; border-radius: 50%; background: var(--tint); }
+
+/* Bottom tabs */
+.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 25;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding: 0;
+}
+.tabs-in { max-width: 26rem; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); }
+.tabs button {
+  background: none; border: 0; cursor: pointer; color: var(--muted);
+  font-family: var(--sans); font-weight: 700; font-size: .6rem; letter-spacing: .02em;
+  min-height: 3.2rem; padding: .3rem 0 .2rem;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .12rem;
+  position: relative;
+}
+.tabs button svg { width: 1.25rem; height: 1.25rem; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS — proposed additions
+   ═══════════════════════════════════════════ */
+
+/* 1. View Transition */
+@keyframes viewIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes viewOut {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+.view-enter { animation: viewIn .3s cubic-bezier(.4,0,.2,1) both; }
+.view-exit  { animation: viewOut .18s cubic-bezier(.4,0,1,1) both; }
+
+/* 2. Staggered Card Entrance */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-anim { animation: cardIn .35s cubic-bezier(.25,.46,.45,.94) both; }
+.card-anim:nth-child(1) { animation-delay: 0s; }
+.card-anim:nth-child(2) { animation-delay: .07s; }
+.card-anim:nth-child(3) { animation-delay: .14s; }
+.card-anim:nth-child(4) { animation-delay: .21s; }
+.card-anim:nth-child(5) { animation-delay: .28s; }
+
+/* 3. Sheet Slide-Up */
+.sheet-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 50;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+}
+.sheet-backdrop.on { opacity: 1; pointer-events: auto; }
+.sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
+  background: var(--surface); border-radius: 1.2rem 1.2rem 0 0;
+  padding: 1rem 1.1rem 1.5rem; max-height: 75vh; overflow-y: auto;
+  transform: translateY(100%);
+  transition: transform .32s cubic-bezier(.32,.72,0,1);
+  box-shadow: 0 -4px 30px rgba(0,0,0,.12);
+}
+.sheet-backdrop.on .sheet { transform: translateY(0); }
+.sheet-handle { width: 2.2rem; height: .22rem; border-radius: 2px; background: var(--line); margin: 0 auto .7rem; }
+.sheet h3 { font-family: var(--sans); font-size: 1rem; margin: 0 0 .6rem; }
+
+/* 5. Tab Bar Animated Indicator */
+.tabs button::before {
+  content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%) scaleX(0);
+  width: 1.8rem; height: 2.5px; border-radius: 0 0 2px 2px; background: var(--gold);
+  transition: transform .25s cubic-bezier(.4,0,.2,1);
+}
+.tabs button[aria-current="page"] { color: var(--gold-text); }
+.tabs button[aria-current="page"] svg { stroke-width: 2.4; }
+.tabs button[aria-current="page"]::before { transform: translateX(-50%) scaleX(1); }
+.tabs button svg { transition: transform .2s ease; }
+.tabs button:active svg { transform: scale(.85); }
+.tabs button { transition: color .2s ease; }
+
+/* 6. Button Feedback */
+.btn { transition: transform .12s ease, box-shadow .2s, opacity .15s; }
+.btn:active { transform: scale(.95); opacity: .85; }
+@keyframes btnPop {
+  0%   { transform: scale(.95); }
+  50%  { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+.btn-pop { animation: btnPop .3s cubic-bezier(.4,0,.2,1); }
+
+/* 7. Checkmark & Progress */
+@keyframes checkPop {
+  0%   { transform: scale(0) rotate(-45deg); opacity: 0; }
+  60%  { transform: scale(1.25) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.check-anim { display: inline-block; animation: checkPop .4s cubic-bezier(.4,0,.2,1) both; }
+@keyframes progressGrow { from { width: 0; } }
+.pbar-fill.animated { animation: progressGrow .8s cubic-bezier(.4,0,.2,1) both; }
+
+/* 8. Skeleton Shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skel-line.shimmer, .skel-circle.shimmer {
+  background: linear-gradient(90deg, var(--tint) 25%, color-mix(in srgb, var(--tint) 50%, var(--surface)) 50%, var(--tint) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Demo-specific: tab-based views, pill nav
+   ═══════════════════════════════════════════ */
+.demo-nav {
+  display: flex; gap: .35rem; padding: .6rem 0; overflow-x: auto;
+  scrollbar-width: none; -ms-overflow-style: none;
+  margin: 0 0 .3rem;
+}
+.demo-nav::-webkit-scrollbar { display: none; }
+.demo-pill {
+  font-family: var(--sans); font-weight: 600; font-size: .72rem;
+  background: var(--tint); color: var(--muted); border: 0; border-radius: 999px;
+  padding: .4rem .8rem; cursor: pointer; white-space: nowrap;
+  transition: background .2s, color .2s, transform .12s;
+}
+.demo-pill:active { transform: scale(.95); }
+.demo-pill.active { background: var(--navy); color: var(--on-navy); }
+
+.demo-view { display: none; }
+.demo-view.active { display: block; }
+
+/* Info chip */
+.info-chip {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-family: var(--sans); font-size: .7rem; font-weight: 600;
+  color: var(--gold-text); background: var(--gold-soft); border-radius: 999px;
+  padding: .25rem .65rem; margin: 0 0 .6rem;
+}
+
+/* Theme toggle */
+.theme-btn {
+  font-family: var(--sans); font-weight: 600; font-size: .7rem;
+  background: rgba(255,255,255,.18); border: 0; color: var(--on-navy);
+  border-radius: 999px; height: 2.2rem; padding: 0 .7rem; cursor: pointer;
+  display: inline-flex; align-items: center; gap: .3rem;
+}
+.theme-btn:active { background: rgba(255,255,255,.28); }
+
+/* Interaction hint */
+.hint {
+  font-family: var(--sans); font-size: .72rem; color: var(--muted);
+  display: flex; align-items: center; gap: .3rem; margin: .4rem 0 .7rem;
+}
+.hint::before {
+  content: "👆"; font-size: .8rem;
+}
+
+/* Meet row */
+.meet { display: flex; gap: .5rem; align-items: center; margin: .2rem 0 .5rem; }
+.avatar {
+  width: 2rem; height: 2rem; border-radius: 50%; background: var(--gold-soft);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .85rem; flex-shrink: 0;
+}
+
+/* Pray card special */
+.pray-row { display: flex; align-items: center; gap: .6rem; padding: .3rem 0; }
+.pray-row + .pray-row { border-top: 1px solid var(--line); }
+.pray-dot { width: .5rem; height: .5rem; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+.pray-text { flex: 1; font-size: .88rem; }
+.pray-btn {
+  font-family: var(--sans); font-size: .72rem; font-weight: 700;
+  background: var(--ok-bg); color: var(--ok); border: 0; border-radius: 999px;
+  padding: .25rem .6rem; cursor: pointer; white-space: nowrap;
+}
+.pray-btn:active { opacity: .7; }
+.pray-btn.done { background: var(--tint); color: var(--muted); text-decoration: line-through; }
+</style>
+</head>
+<body>
+
+<div class="demo-shell">
+
+  <!-- Top Bar -->
+  <div class="bar">
+    <div class="bar-in">
+      <button class="tbtn" onclick="openSheet()">☰</button>
+      <span class="where" id="barTitle">Home</span>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">☽ Dark</button>
+    </div>
+  </div>
+
+  <!-- Scrollable Area -->
+  <div class="demo-scroll" id="scroll">
+
+    <!-- Pill Navigation -->
+    <nav class="demo-nav" id="pillNav">
+      <button class="demo-pill active" onclick="goDemo('home',this)">Home</button>
+      <button class="demo-pill" onclick="goDemo('cards',this)">Cards</button>
+      <button class="demo-pill" onclick="goDemo('sheet',this)">Sheet</button>
+      <button class="demo-pill" onclick="goDemo('toast',this)">Toast</button>
+      <button class="demo-pill" onclick="goDemo('buttons',this)">Buttons</button>
+      <button class="demo-pill" onclick="goDemo('progress',this)">Progress</button>
+      <button class="demo-pill" onclick="goDemo('loading',this)">Loading</button>
+    </nav>
+
+    <!-- ─── HOME ─── -->
+    <div class="demo-view active" id="v-home">
+      <div class="hero view-enter">
+        <div class="eyebrow">Welcome back</div>
+        <h1>Good Evening, Mark</h1>
+        <p class="lede">Your discipleship journey continues.</p>
+      </div>
+
+      <div class="card card-anim navy">
+        <span class="k" style="opacity:.8;">This Week</span>
+        <h3>Session 12: The Armor of God</h3>
+        <p style="opacity:.85; font-size:.88rem;">Ephesians 6:10-18 — Put on the full armor of God.</p>
+        <button class="btn sm" style="background:rgba(255,255,255,.18);color:var(--on-navy);border-color:transparent;" onclick="btnPop(this); showToast('Opening lesson…')">Start Reading →</button>
+      </div>
+
+      <div class="card card-anim">
+        <span class="k">Memory Verse</span>
+        <h3>Philippians 4:13</h3>
+        <p style="font-size:.88rem;">I can do all things through Christ who strengthens me.</p>
+        <div class="pbar"><div class="pbar-fill" style="width:75%;"></div></div>
+        <span style="font-family:var(--sans);font-size:.72rem;color:var(--muted);">75% mastered</span>
+      </div>
+
+      <div class="card card-anim">
+        <span class="k">Prayer Wall</span>
+        <div class="pray-row">
+          <div class="pray-dot"></div>
+          <span class="pray-text">Healing for Lola's recovery</span>
+          <button class="pray-btn" onclick="prayDone(this)">🙏 Pray</button>
+        </div>
+        <div class="pray-row">
+          <div class="pray-dot"></div>
+          <span class="pray-text">Guidance for the youth ministry</span>
+          <button class="pray-btn" onclick="prayDone(this)">🙏 Pray</button>
+        </div>
+        <div class="pray-row">
+          <div class="pray-dot"></div>
+          <span class="pray-text">Safe travels — mission trip team</span>
+          <button class="pray-btn" onclick="prayDone(this)">🙏 Pray</button>
+        </div>
+      </div>
+
+      <div class="card card-anim tint">
+        <div class="meet">
+          <div class="avatar">📅</div>
+          <div>
+            <span class="k">Next Session</span>
+            <span style="font-family:var(--sans);font-size:.88rem;font-weight:600;">Sunday, Nov 22 · 9:00 AM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── CARDS (stagger demo) ─── -->
+    <div class="demo-view" id="v-cards">
+      <div class="info-chip">⚡ Cards animate in with a stagger</div>
+      <p class="hint">Watch the cascade effect</p>
+      <div id="cardBox"></div>
+      <button class="btn sm gold" onclick="replayCards()" style="margin-top:.3rem;">↻ Replay</button>
+    </div>
+
+    <!-- ─── SHEET ─── -->
+    <div class="demo-view" id="v-sheet">
+      <div class="info-chip">⚡ Sheet slides up with spring physics</div>
+      <p class="hint">Tap the button, then tap the backdrop to dismiss</p>
+      <div class="card">
+        <h3>Switch Group</h3>
+        <p style="font-size:.88rem;">Bottom sheets replace popups and alerts for a native feel.</p>
+        <button class="btn primary block" onclick="openSheet()">Open Group Selector</button>
+      </div>
+    </div>
+
+    <!-- ─── TOAST ─── -->
+    <div class="demo-view" id="v-toast">
+      <div class="info-chip">⚡ Toast slides up with spring scale</div>
+      <p class="hint">Tap any button below</p>
+      <div class="row">
+        <button class="btn gold" onclick="showToast('Prayer marked ✓')">Prayer Done</button>
+        <button class="btn primary" onclick="showToast('Checked in for Week 12')">Check In</button>
+      </div>
+      <div class="row">
+        <button class="btn ghost" onclick="showToast('Copied invite code')">Copy Code</button>
+        <button class="btn" onclick="showToast('Saved to journal')">Save Note</button>
+      </div>
+    </div>
+
+    <!-- ─── BUTTONS ─── -->
+    <div class="demo-view" id="v-buttons">
+      <div class="info-chip">⚡ Buttons press in + bounce on success</div>
+      <p class="hint">Tap and release to feel the bounce</p>
+      <div style="display:flex;flex-direction:column;gap:.5rem;">
+        <button class="btn primary block" onclick="btnPop(this); showToast('Prayed! 🙏')">I Prayed Today</button>
+        <button class="btn gold block" onclick="btnPop(this); showToast('Checked in ✓')">Check In for This Week</button>
+        <button class="btn block" onclick="btnPop(this); showToast('Verse practiced')">Practice Memory Verse</button>
+        <button class="btn ghost block" onclick="btnPop(this); showToast('Link copied')">Share Class Invite</button>
+      </div>
+    </div>
+
+    <!-- ─── PROGRESS ─── -->
+    <div class="demo-view" id="v-progress">
+      <div class="info-chip">⚡ Animated checkmarks + progress bars</div>
+      <p class="hint">Tap replay to see it again</p>
+
+      <div class="card" id="progressCard">
+        <span class="k">Attendance</span>
+        <div style="display:flex;align-items:center;gap:.6rem;margin:.2rem 0 .5rem;">
+          <span id="checkCircle" style="width:1.8rem;height:1.8rem;border-radius:50%;border:2px solid var(--ok);display:inline-flex;align-items:center;justify-content:center;color:var(--ok);font-size:.95rem;flex-shrink:0;"></span>
+          <span style="font-family:var(--sans);font-size:.88rem;">10 of 12 sessions attended</span>
+        </div>
+        <div class="pbar"><div class="pbar-fill" id="pbar1" style="width:0;"></div></div>
+        <span style="font-family:var(--sans);font-size:.72rem;color:var(--muted);" id="pct1">0%</span>
+      </div>
+
+      <div class="card">
+        <span class="k">Memory Verse</span>
+        <h3>Level 3 of 5</h3>
+        <div class="pbar"><div class="pbar-fill" id="pbar2" style="width:0;"></div></div>
+        <span style="font-family:var(--sans);font-size:.72rem;color:var(--muted);" id="pct2">0%</span>
+      </div>
+
+      <button class="btn sm gold" onclick="replayProgress()" style="margin-top:.3rem;">↻ Replay</button>
+    </div>
+
+    <!-- ─── LOADING ─── -->
+    <div class="demo-view" id="v-loading">
+      <div class="info-chip">⚡ Shimmer vs static skeletons</div>
+
+      <span class="k" style="margin-top:.4rem;">With shimmer (new)</span>
+      <div class="card">
+        <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.5rem;">
+          <div class="skel-circle shimmer"></div>
+          <div style="flex:1;">
+            <div class="skel-line shimmer" style="width:50%;"></div>
+            <div class="skel-line shimmer" style="width:30%;margin:0;"></div>
+          </div>
+        </div>
+        <div class="skel-line shimmer" style="width:95%;"></div>
+        <div class="skel-line shimmer" style="width:80%;"></div>
+        <div class="skel-line shimmer" style="width:60%;margin:0;"></div>
+      </div>
+
+      <span class="k" style="margin-top:.5rem;">Without shimmer (current)</span>
+      <div class="card">
+        <div style="display:flex;gap:.6rem;align-items:center;margin-bottom:.5rem;">
+          <div class="skel-circle"></div>
+          <div style="flex:1;">
+            <div class="skel-line" style="width:50%;"></div>
+            <div class="skel-line" style="width:30%;margin:0;"></div>
+          </div>
+        </div>
+        <div class="skel-line" style="width:95%;"></div>
+        <div class="skel-line" style="width:80%;"></div>
+        <div class="skel-line" style="width:60%;margin:0;"></div>
+      </div>
+    </div>
+
+  </div><!-- /demo-scroll -->
+
+</div><!-- /demo-shell -->
+
+<!-- Sheet Modal -->
+<div class="sheet-backdrop" id="sheetBackdrop" onclick="closeSheet()">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <h3>Switch Group</h3>
+    <div class="card tint" style="cursor:pointer;" onclick="closeSheet(); showToast('Switched to Sunday Morning')">
+      <div class="meet">
+        <div class="avatar">🌅</div>
+        <div>
+          <span style="font-family:var(--sans);font-weight:700;font-size:.9rem;">Sunday Morning</span>
+          <span style="display:block;font-family:var(--sans);font-size:.75rem;color:var(--muted);">12 members · You are the leader</span>
+        </div>
+      </div>
+    </div>
+    <div class="card tint" style="cursor:pointer;" onclick="closeSheet(); showToast('Switched to Wednesday Evening')">
+      <div class="meet">
+        <div class="avatar">🌙</div>
+        <div>
+          <span style="font-family:var(--sans);font-weight:700;font-size:.9rem;">Wednesday Evening</span>
+          <span style="display:block;font-family:var(--sans);font-size:.75rem;color:var(--muted);">8 members · Co-leader</span>
+        </div>
+      </div>
+    </div>
+    <button class="btn block ghost" onclick="closeSheet()" style="margin-top:.3rem;">Cancel</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Bottom Tab Bar -->
+<div class="tabs">
+  <div class="tabs-in">
+    <button aria-current="page" onclick="selectTab(this,'Home')">
+      <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Home
+    </button>
+    <button onclick="selectTab(this,'Study')">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Study
+    </button>
+    <button onclick="selectTab(this,'Attend')">
+      <svg viewBox="0 0 24 24"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="M12 6v6l4 2"/></svg>
+      Attend
+    </button>
+    <button onclick="selectTab(this,'Pray')">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+      Pray
+    </button>
+    <button onclick="selectTab(this,'More')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      More
+    </button>
+  </div>
+</div>
+
+<script>
+/* ── View Switching (with animation) ── */
+function goDemo(id, pill) {
+  // Update pills
+  document.querySelectorAll(".demo-pill").forEach(function(p){ p.classList.remove("active"); });
+  pill.classList.add("active");
+
+  // Animate out current
+  var current = document.querySelector(".demo-view.active");
+  if (current) {
+    current.classList.add("view-exit");
+    current.addEventListener("animationend", function handler() {
+      current.removeEventListener("animationend", handler);
+      current.classList.remove("active", "view-exit");
+      showView(id);
+    });
+  } else {
+    showView(id);
+  }
+
+  // Update bar title
+  var titles = { home:"Home", cards:"Cards", sheet:"Sheet", toast:"Toast", buttons:"Buttons", progress:"Progress", loading:"Loading" };
+  document.getElementById("barTitle").textContent = titles[id] || "Demo";
+}
+
+function showView(id) {
+  var el = document.getElementById("v-" + id);
+  if (!el) return;
+  el.classList.add("active", "view-enter");
+  el.addEventListener("animationend", function handler() {
+    el.removeEventListener("animationend", handler);
+    el.classList.remove("view-enter");
+  });
+  // scroll to top
+  document.getElementById("scroll").scrollTo({ top: 0, behavior: "smooth" });
+  // Auto-play for certain views
+  if (id === "cards") replayCards();
+  if (id === "progress") replayProgress();
+}
+
+/* ── Cards Stagger ── */
+function replayCards() {
+  var box = document.getElementById("cardBox");
+  box.innerHTML = "";
+  var items = [
+    { emoji:"📖", k:"This Week", h:"Session 12: The Armor of God", p:"Ephesians 6:10-18" },
+    { emoji:"💬", k:"Memory Verse", h:"Philippians 4:13", p:"75% mastered" },
+    { emoji:"🙏", k:"Prayer Requests", h:"3 Active Requests", p:"2 people praying today" },
+    { emoji:"📊", k:"Attendance", h:"10 of 12 Sessions", p:"Great consistency!" }
+  ];
+  items.forEach(function(it) {
+    var c = document.createElement("div");
+    c.className = "card card-anim";
+    c.innerHTML = '<div class="meet"><div class="avatar">' + it.emoji + '</div><div><span class="k">' + it.k + '</span><span style="font-family:var(--sans);font-weight:600;font-size:.9rem;">' + it.h + '</span><span style="display:block;font-family:var(--sans);font-size:.78rem;color:var(--muted);">' + it.p + '</span></div></div>';
+    box.appendChild(c);
+  });
+}
+
+/* ── Sheet ── */
+function openSheet() { document.getElementById("sheetBackdrop").classList.add("on"); }
+function closeSheet() { document.getElementById("sheetBackdrop").classList.remove("on"); }
+
+/* ── Toast ── */
+var toastTimer;
+function showToast(msg) {
+  var t = document.getElementById("toast");
+  clearTimeout(toastTimer);
+  t.textContent = msg;
+  t.classList.add("on");
+  toastTimer = setTimeout(function(){ t.classList.remove("on"); }, 2000);
+}
+
+/* ── Tab Bar ── */
+function selectTab(btn, label) {
+  document.querySelectorAll(".tabs button").forEach(function(b){ b.removeAttribute("aria-current"); });
+  btn.setAttribute("aria-current", "page");
+  document.getElementById("barTitle").textContent = label;
+  showToast("Switched to " + label);
+}
+
+/* ── Button Pop ── */
+function btnPop(btn) {
+  btn.classList.remove("btn-pop");
+  void btn.offsetWidth;
+  btn.classList.add("btn-pop");
+}
+
+/* ── Pray Button ── */
+function prayDone(btn) {
+  btn.classList.add("done");
+  btn.textContent = "Prayed ✓";
+  btn.disabled = true;
+  showToast("Prayer marked ✓");
+}
+
+/* ── Progress ── */
+function replayProgress() {
+  var c = document.getElementById("checkCircle");
+  var b1 = document.getElementById("pbar1");
+  var b2 = document.getElementById("pbar2");
+  var p1 = document.getElementById("pct1");
+  var p2 = document.getElementById("pct2");
+  c.innerHTML = ""; b1.style.width = "0"; b2.style.width = "0";
+  b1.classList.remove("animated"); b2.classList.remove("animated");
+  p1.textContent = "0%"; p2.textContent = "0%";
+
+  setTimeout(function(){ c.innerHTML = '<span class="check-anim">✓</span>'; }, 150);
+
+  setTimeout(function(){
+    b1.classList.add("animated"); b1.style.width = "83%";
+    countUp(p1, 83);
+  }, 100);
+
+  setTimeout(function(){
+    b2.classList.add("animated"); b2.style.width = "60%";
+    countUp(p2, 60);
+  }, 250);
+}
+function countUp(el, target) {
+  var n = 0;
+  (function step(){ n += 2; if(n > target) n = target; el.textContent = n + "%"; if(n < target) requestAnimationFrame(step); })();
+}
+
+/* ── Theme Toggle ── */
+function toggleTheme() {
+  var r = document.documentElement;
+  var dark = r.dataset.theme === "dark";
+  r.dataset.theme = dark ? "" : "dark";
+  document.getElementById("themeBtn").textContent = dark ? "☽ Dark" : "☀ Light";
+}
+
+/* ── Init ── */
+replayCards();
+replayProgress();
+</script>
+
+</body>
+</html>

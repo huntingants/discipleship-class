@@ -282,7 +282,7 @@ a, button, summary { -webkit-tap-highlight-color: transparent; }
 .tabs button[aria-current="page"] svg { stroke-width: 2.4; }
 .tabs button[aria-current="page"]::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 2rem; height: 3px; border-radius: 0 0 3px 3px; background: var(--gold); }
 
-.toast { position: fixed; left: 50%; bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 1rem) scale(.95); background: var(--navy); color: var(--on-navy); font-family: var(--sans); font-weight: 600; font-size: .85rem; line-height: 1.4; padding: .7rem 1.2rem; border-radius: .9rem; max-width: min(90vw, 28rem); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s cubic-bezier(.4,0,.2,1); z-index: 40; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.15); }
+.toast { position: fixed; left: 50%; bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 1rem) scale(.95); background: var(--navy); color: var(--on-navy); font-family: var(--sans); font-weight: 600; font-size: .85rem; line-height: 1.4; padding: .7rem 1.2rem; border-radius: .9rem; max-width: min(90vw, 28rem); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .35s cubic-bezier(.34,1.56,.64,1); z-index: 40; text-align: center; box-shadow: 0 8px 30px rgba(0,0,0,.15); }
 .toast.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
 
 /* shared pieces */
@@ -314,6 +314,8 @@ h2.sub { font-family: var(--sans); font-size: 1.25rem; line-height: 1.2; margin:
 .btn.ghost { border-color: var(--line); color: var(--muted); }
 .btn { transition: transform .12s ease, box-shadow .2s, opacity .15s; }
 .btn:active { transform: scale(.96); opacity: .88; }
+.btn.pop { animation: btnPop .3s cubic-bezier(.34,1.56,.64,1); }
+.card:active { background: var(--tint); transition: background .1s; }
 .btn[disabled] { opacity: .45; cursor: default; }
 .row { display: flex; gap: .6rem; flex-wrap: wrap; margin: 0 0 .9rem; }
 .row > .btn { flex: 1 1 10rem; }
@@ -328,7 +330,7 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 .pill.ok { background: var(--ok-bg); color: var(--ok); }
 .pill.gold { background: var(--gold-soft); color: var(--on-soft); }
 .bartrack { height: .55rem; border-radius: 999px; background: var(--tint); overflow: hidden; margin: .5rem 0; }
-.bartrack i { display: block; height: 100%; background: var(--gold); border-radius: 999px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.bartrack i { display: block; height: 100%; background: var(--gold); border-radius: 999px; animation: progressGrow .6s ease-out both; }
 .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .6rem; margin: 0 0 .9rem; }
 .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 1.3rem; padding: .7rem .5rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
 .stat b { display: block; font-family: var(--sans); font-size: 1.5rem; line-height: 1.1; }
@@ -336,7 +338,7 @@ input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focu
 .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: .8rem 0 0; }
 .step { text-align: center; overflow-wrap: anywhere; font-family: var(--sans); font-size: .62rem; font-weight: 700; color: var(--muted); }
 .step i { display: flex; align-items: center; justify-content: center; width: 2.4rem; height: 2.4rem; margin: 0 auto .3rem; border-radius: 50%; border: 2px solid var(--line); font-style: normal; font-size: 1rem; color: transparent; transition: background .3s, border-color .3s, color .3s, box-shadow .3s; }
-.step.on i { background: var(--gold); border-color: var(--gold); color: var(--on-gold); box-shadow: 0 2px 8px color-mix(in srgb, var(--gold) 40%, transparent); }
+.step.on i { background: var(--gold); border-color: var(--gold); color: var(--on-gold); box-shadow: 0 2px 8px color-mix(in srgb, var(--gold) 40%, transparent); animation: checkPop .4s cubic-bezier(.34,1.56,.64,1) both; }
 .step.on { color: var(--ink); }
 
 /* lists */
@@ -511,13 +513,16 @@ ul.bul li::before { content: ""; position: absolute; left: .2rem; top: .75em; wi
 @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes scaleIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes btnPop { 0% { transform: scale(.96); } 50% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes checkPop { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+@keyframes progressGrow { from { width: 0; } }
 .skel { border-radius: .7rem; background: linear-gradient(90deg, var(--tint) 30%, var(--surface) 50%, var(--tint) 70%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
 .skel-line { height: 1rem; margin: 0 0 .6rem; border-radius: .4rem; background: linear-gradient(90deg, var(--tint) 30%, var(--surface) 50%, var(--tint) 70%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; }
 .skel-circle { width: 2.8rem; height: 2.8rem; border-radius: 50%; background: linear-gradient(90deg, var(--tint) 30%, var(--surface) 50%, var(--tint) 70%); background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite; flex: none; }
 
 /* page transitions */
 #app { animation: fadeUp .3s ease-out; }
-@media (prefers-reduced-motion: reduce) { #app, .card, .person, .lcard, .stat { animation: none !important; } }
+@media (prefers-reduced-motion: reduce) { #app, .card, .person, .lcard, .stat, .btn.pop, .check-anim, .pbar-fill, .step.on i, .bartrack i { animation: none !important; } .toast { transition-duration: 0s !important; } .card:active { transition: none; } }
 
 /* staggered card entrance */
 .card, .person, .lcard, .stat { animation: fadeUp .35s ease-out both; }
@@ -527,6 +532,10 @@ ul.bul li::before { content: ""; position: absolute; left: .2rem; top: .75em; wi
 .card:nth-child(4), .person:nth-child(4), .lcard:nth-child(4) { animation-delay: .16s; }
 .card:nth-child(5), .person:nth-child(5), .lcard:nth-child(5) { animation-delay: .2s; }
 .card:nth-child(n+6), .person:nth-child(n+6), .lcard:nth-child(n+6) { animation-delay: .24s; }
+
+/* progress & checkmark animations */
+.pbar-fill { animation: progressGrow .6s ease-out both; }
+.check-anim { animation: checkPop .4s cubic-bezier(.34,1.56,.64,1) both; }
 
 /* sign-in */
 .linkbtn { display: block; margin: .2rem auto 1rem; background: none; border: 0; color: var(--gold-text); font-family: var(--sans); font-weight: 700; font-size: .92rem; text-decoration: underline; min-height: 2.8rem; padding: 0 .5rem; cursor: pointer; }
@@ -823,7 +832,9 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     var sentDel = (S.me.pdel || []).slice();
     return first.then(function () { return gone.length ? sb.from("prayers").delete().in("id", gone).then(ck) : null; }).then(function () {
       S.srvPrayers = keep;
-      S.me.pdel = (S.me.pdel || []).filter(function (id) { return sentDel.indexOf(id) < 0; }); saveLocal();
+      /* Clean pdel: remove IDs we just sent AND any stale IDs whose server copy is already gone */
+      S.me.pdel = (S.me.pdel || []).filter(function (id) { return sentDel.indexOf(id) < 0 && S.srvPrayers[id]; });
+      saveLocal();
     });
   }
   function pushJournal() {
@@ -1885,6 +1896,14 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   function render() {
     pendingRender = false;
+    try { renderInner(); } catch (e) {
+      console.error("render error", e);
+      app.innerHTML = '<div class="hero"><h1>Something went wrong</h1><p class="lede">The page hit an error while drawing. Tap the button below to reload.</p></div>' +
+        '<button class="btn primary block" onclick="location.reload()" style="margin:1rem auto;max-width:16rem">Reload</button>' +
+        '<p class="small" style="text-align:center;margin-top:.5rem;color:var(--mute)">' + (e.message || "Unknown error").slice(0, 120) + "</p>";
+    }
+  }
+  function renderInner() {
     var y = window.scrollY, r = parseRoute(), same = render.last === location.hash;
     render.last = location.hash;
     if (!S.ready) { app.innerHTML = '<div class="hero"><p class="eyebrow">Discipleship Class</p><h1>Opening your class...</h1><p class="lede">One moment.</p></div><div class="card" style="border:0;background:none;box-shadow:none"><div class="skel-line" style="width:70%"></div><div class="skel-line" style="width:50%"></div><div class="skel" style="height:5rem;margin:0 0 .8rem;border-radius:1.3rem"></div><div class="skel" style="height:5rem;border-radius:1.3rem"></div></div>'; tabsIn.innerHTML = ""; return; }
@@ -2286,8 +2305,12 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   }
 
   /* read aloud */
-  var speaking = null;
-  function stopSpeak() { try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {} if (speaking) { speaking.textContent = "Listen"; speaking = null; } }
+  var speaking = null, speakTimer = 0;
+  function stopSpeak() {
+    clearTimeout(speakTimer); speakTimer = 0;
+    try { if (window.speechSynthesis) speechSynthesis.cancel(); } catch (e) {}
+    if (speaking) { speaking.textContent = "Listen"; speaking = null; }
+  }
   function listenBtn() { return window.speechSynthesis ? '<button type="button" class="btn sm ghost" data-act="listen">Listen</button>' : ""; }
 
   Object.assign(ACT, {
@@ -2368,8 +2391,11 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       var ref = box.querySelector(".read span, h3 > span"), parts = [ref ? ref.textContent : ""];
       box.querySelectorAll(".vt").forEach(function (p) { var c = p.cloneNode(true); c.querySelectorAll("sup,.vb").forEach(function (x) { x.remove(); }); parts.push(c.textContent); });
       var u = new SpeechSynthesisUtterance(parts.join(". ")); u.lang = "en-US"; u.rate = 0.92;
-      u.onend = u.onerror = function () { if (speaking === t) { t.textContent = "Listen"; speaking = null; } };
+      u.onend = u.onerror = function () { if (speaking === t) stopSpeak(); };
       t.textContent = "Stop"; speaking = t; speechSynthesis.speak(u);
+      /* Safety timeout: some browsers never fire onend/onerror. 90 seconds covers long passages. */
+      clearTimeout(speakTimer);
+      speakTimer = setTimeout(function () { if (speaking === t) stopSpeak(); }, 90000);
     }
   });
   Object.assign(BIND, {
@@ -2546,8 +2572,11 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       if (speaking === t) { stopSpeak(); return; }
       stopSpeak();
       var u = new SpeechSynthesisUtterance(t.getAttribute("data-say") || ""); u.lang = "en-US"; u.rate = 0.9;
-      u.onend = u.onerror = function () { if (speaking === t) { t.textContent = "Listen"; speaking = null; } };
+      u.onend = u.onerror = function () { if (speaking === t) stopSpeak(); };
       t.textContent = "Stop"; speaking = t; speechSynthesis.speak(u);
+      /* Safety timeout: some browsers never fire onend/onerror. */
+      clearTimeout(speakTimer);
+      speakTimer = setTimeout(function () { if (speaking === t) stopSpeak(); }, 90000);
     }
   });
 
@@ -2620,13 +2649,16 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     }
     return h;
   }
-  async function switchTo(cid) {
+  function switchTo(cid) {
     S.classId = cid; S.cls = null; S.settings = undefined; S.sel = null; S.draft.set = null; S.draft.msg = "";
     S.confirmWeek = 0; S.confirmMat = null; S.confirmDel = null; S.showNew = false; S.confirmRm = null; S.confirmAcct = false;
     S.roster = {}; S.attendance = {}; S.prayerT = {}; S.wall = {}; S.shares = {}; S.preps = {}; S.prayed = {}; S.leaders = []; S.notes = []; S.attOpen = false; S.attW = 0;
-    go("tdash"); render();
-    try { await loadClass(); await applyMat(); await loadTeacherData(); await loadGroups(); } catch (e) { failSave(e); }
-    window.scrollTo(0, 0); render();
+    go("tdash");
+    /* Show loading skeleton while group data loads */
+    app.innerHTML = '<div class="hero"><h1>Switching group…</h1><p class="lede">One moment.</p></div><div class="card" style="border:0;background:none;box-shadow:none"><div class="skel-line" style="width:70%"></div><div class="skel-line" style="width:50%"></div><div class="skel" style="height:5rem;margin:0 0 .8rem;border-radius:1.3rem"></div><div class="skel" style="height:5rem;border-radius:1.3rem"></div></div>';
+    return loadClass().then(function () { return applyMat(); }).then(function () { return loadTeacherData(); }).then(function () { return loadGroups(); }).then(function () {
+      window.scrollTo(0, 0); render();
+    }, failSave);
   }
   function groupErr(r) {
     var m = (r.error && r.error.message) || "";
@@ -2692,8 +2724,14 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     document.body.classList.add("lifted");
   }
   window.addEventListener("resize", dodgeBadge);
-  [600, 1800, 4000, 9000].forEach(function (ms) { setTimeout(dodgeBadge, ms); });
-  setInterval(dodgeBadge, 6000);
+  /* Check a few times after page load; once a badge is found and lifted, or after enough checks with no badge, stop polling. */
+  var dodgeChecks = 0, dodgeInterval = 0;
+  function dodgePoll() {
+    dodgeBadge(); dodgeChecks++;
+    if (document.body.classList.contains("lifted") || dodgeChecks >= 6) { clearInterval(dodgeInterval); dodgeInterval = 0; }
+  }
+  [600, 1800, 4000].forEach(function (ms) { setTimeout(dodgePoll, ms); });
+  dodgeInterval = setInterval(dodgePoll, 6000);
   /* ---------- follow-up: notes, earlier attendance, who needs a call, catch-up, install hint ---------- */
   var DAY = 86400000;
   function todayStr() {
