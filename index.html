@@ -732,7 +732,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* crash reports: send a short note about unexpected errors so the app admin can see them.
      No names, notes or journal text are sent: only the error message, where it happened and the browser. */
-  var APP_VER = "dc-v16", errSent = {}, errCount = 0;
+  var APP_VER = "dc-v17", errSent = {}, errCount = 0;
   function reportError(msg, src) {
     try {
       msg = String(msg || "").slice(0, 500);
