@@ -58,6 +58,23 @@ const tests = {
     check("only this class's lessons downloaded", JSON.stringify(app.fetched.slice().sort()) === '["data/bible.json","data/mat-disciple.json"]', JSON.stringify(app.fetched));
   },
 
+  async "Lessons in Bisaya: translated lessons in Bisaya, the rest in English, verses still work"() {
+    const app = start({ server: student(), hash: "sl1", local: { dc_lang: "ceb" } });
+    await wait(1500);
+    check("lesson 1 shown in Bisaya", /<h1 class="lh1">Asa ka mopuyo sa kahangtoran\?/.test(app.page()));
+    check("verse text still shown", (app.page().match(/class="vtext"/g) || []).length > 0);
+    check("Bisaya lessons downloaded", app.fetched.includes("data/mat-disciple.ceb.json"), JSON.stringify(app.fetched));
+    const later = start({ server: student({ classes: [klass({ week: 19 })] }), hash: "sl19", local: { dc_lang: "ceb" } });
+    await wait(1500);
+    check("untranslated lesson 19 falls back to English", /<h1 class="lh1">Who the Holy Spirit is/.test(later.page()));
+    const t = start({ server: teacher(), hash: "tl1", local: { dc_lang: "ceb" } });
+    await wait(1500);
+    check("teacher sees Bisaya labels and the reading note", t.page().includes("Pangutan-a ang grupo") && t.page().includes("Maayo kon tulo ang magbasa"));
+    const en = start({ server: student(), hash: "sl1" });
+    await wait(1500);
+    check("English stays the default and fetches no translation", /Where will you spend eternity\?/.test(en.page()) && !en.fetched.some((f) => f.includes(".ceb.")));
+  },
+
   async "Lessons: returning user (lessons already saved on the phone)"() {
     const app = start({ server: student(), hash: "sl1", local: { dc_lastmat: "disciple" } });
     await wait(1500);

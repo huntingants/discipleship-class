@@ -579,7 +579,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 <div class="sheetbg" id="sheetbg"><div class="sheet" role="dialog" aria-label="Bible passage"><div class="sheet-in" id="sheetin"></div></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script type="application/json" id="materials">[{"id":"disciple","name":"Disciple Series","short":"Disciple","off":0,"desc":"63 weekly lessons in 7 phases, from new life in Christ to leading and going to the nations.","partWord":"Phase","unit":"phase","phases":[{"n":1,"t":"New Life","d":"The gospel, assurance, prayer to begin, and baptism.","a":1,"b":9},{"n":2,"t":"Daily Walk","d":"Prayer, the Bible, church, giving and growing every day.","a":10,"b":18},{"n":3,"t":"Spirit-Led Life","d":"Knowing the Holy Spirit and being led by Him.","a":19,"b":27},{"n":4,"t":"Lordship, Church and Mission","d":"Following Jesus fully, church life and making disciples.","a":28,"b":36},{"n":5,"t":"Knowing the Bible","d":"Trusting, studying and understanding Scripture.","a":37,"b":45},{"n":6,"t":"Character and Relationships","d":"Identity, the Spirit's fruit, home, conflict, purity, money and rest.","a":46,"b":54},{"n":7,"t":"Mission and Leadership","d":"Gifts, sharing the gospel, leading and going to the nations.","a":55,"b":63}]},{"id":"ohb","name":"OHB Series","short":"OHB","off":1000,"desc":"48 weekly lessons in 4 series: Salvation, Maturity, Discipleship and Victorious Life. The lessons keep the OHB wording.","partWord":"","unit":"series","phases":[{"n":1,"t":"Salvation Series","d":"Life after death, the gospel, assurance, the new birth, God as Father, and baptism.","a":1,"b":12},{"n":2,"t":"Maturity Series","d":"Prayer, the Word, repentance, faith, giving, the Lord's Day and the Holy Spirit.","a":13,"b":24},{"n":3,"t":"Discipleship Series","d":"Commitment, hearing God, the church, work, serving, blessing others and multiplying.","a":25,"b":36},{"n":4,"t":"Victorious Life Series","d":"Persecution, forgiveness, God's presence, fasting, purity and walking with God.","a":37,"b":48}]},{"id":"prep","name":"Preparatory Lesson","short":"Prep","off":2000,"desc":"3 introductory lessons covering what Christianity is, spiritual growth, and navigating the Bible, before starting the full course.","partWord":"","unit":"","phases":[{"n":1,"t":"Preparatory Lesson","d":"Core beliefs, the Bible, spiritual growth, and what to expect in the course.","a":1,"b":3}]}]</script>
+<script type="application/json" id="materials">[{"id":"disciple","name":"Disciple Series","short":"Disciple","off":0,"desc":"63 weekly lessons in 7 phases, from new life in Christ to leading and going to the nations.","partWord":"Phase","unit":"phase","langs":["ceb"],"phases":[{"n":1,"t":"New Life","d":"The gospel, assurance, prayer to begin, and baptism.","a":1,"b":9},{"n":2,"t":"Daily Walk","d":"Prayer, the Bible, church, giving and growing every day.","a":10,"b":18},{"n":3,"t":"Spirit-Led Life","d":"Knowing the Holy Spirit and being led by Him.","a":19,"b":27},{"n":4,"t":"Lordship, Church and Mission","d":"Following Jesus fully, church life and making disciples.","a":28,"b":36},{"n":5,"t":"Knowing the Bible","d":"Trusting, studying and understanding Scripture.","a":37,"b":45},{"n":6,"t":"Character and Relationships","d":"Identity, the Spirit's fruit, home, conflict, purity, money and rest.","a":46,"b":54},{"n":7,"t":"Mission and Leadership","d":"Gifts, sharing the gospel, leading and going to the nations.","a":55,"b":63}]},{"id":"ohb","name":"OHB Series","short":"OHB","off":1000,"desc":"48 weekly lessons in 4 series: Salvation, Maturity, Discipleship and Victorious Life. The lessons keep the OHB wording.","partWord":"","unit":"series","phases":[{"n":1,"t":"Salvation Series","d":"Life after death, the gospel, assurance, the new birth, God as Father, and baptism.","a":1,"b":12},{"n":2,"t":"Maturity Series","d":"Prayer, the Word, repentance, faith, giving, the Lord's Day and the Holy Spirit.","a":13,"b":24},{"n":3,"t":"Discipleship Series","d":"Commitment, hearing God, the church, work, serving, blessing others and multiplying.","a":25,"b":36},{"n":4,"t":"Victorious Life Series","d":"Persecution, forgiveness, God's presence, fasting, purity and walking with God.","a":37,"b":48}]},{"id":"prep","name":"Preparatory Lesson","short":"Prep","off":2000,"desc":"3 introductory lessons covering what Christianity is, spiritual growth, and navigating the Bible, before starting the full course.","partWord":"","unit":"","phases":[{"n":1,"t":"Preparatory Lesson","d":"Core beliefs, the Bible, spiritual growth, and what to expect in the course.","a":1,"b":3}]}]</script>
 <script>
 (function () {
   "use strict";
@@ -591,23 +591,46 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function offOf(id) { var m = matById(id); return m ? m.off : 0; }
   /* Lessons live in data/mat-<id>.json and load only when a class needs them, so the app opens fast.
      Call loadMat(id) (and wait for it) before setMaterial(id); the service worker keeps a copy for offline use. */
+  /* Lesson language. Translations live in data/mat-<id>.<lang>.json with the same shape as the English file;
+     a material lists the languages it has in "langs". Any lesson not translated yet shows in English. */
+  var LANG = store("dc_lang") === "ceb" ? "ceb" : "en";
   var matLoading = {};
+  function getJson(u) { return fetch(u).then(function (r) { if (!r.ok) throw new TypeError("Failed to fetch lessons"); return r.json(); }); }
+  function mergeLang(en, tr) {
+    if (!Array.isArray(tr)) return en;
+    var by = {}; tr.forEach(function (l) { if (l && l.n) by[l.n] = l; });
+    return en.map(function (l) { return by[l.n] || l; });
+  }
   function loadMat(id) {
     var m = matById(id) || MATS[0];
     if (m.lessons) return Promise.resolve(m);
-    if (!matLoading[m.id]) {
-      matLoading[m.id] = fetch("data/mat-" + m.id + ".json").then(function (r) {
-        if (!r.ok) throw new TypeError("Failed to fetch lessons");
-        return r.json();
-      }).then(function (ls) {
+    var lang = LANG, key = m.id + ":" + lang;
+    if (!matLoading[key]) {
+      var en = m.en ? Promise.resolve(m.en) : getJson("data/mat-" + m.id + ".json").then(function (ls) {
         if (!Array.isArray(ls) || !ls.length) throw new TypeError("Failed to fetch lessons");
+        m.en = ls; return ls;
+      });
+      var tr = lang === "en" || (m.langs || []).indexOf(lang) < 0 ? Promise.resolve(null) : getJson("data/mat-" + m.id + "." + lang + ".json").catch(function () { return null; });
+      matLoading[key] = Promise.all([en, tr]).then(function (r) {
+        if (lang !== LANG) return loadMat(m.id); /* the language changed while this was loading */
+        var ls = mergeLang(r[0], r[1]);
         m.lessons = ls;
         if (MAT === m && !LESSONS.length) { LESSONS = ls; TOTAL = ls.length; } /* this is the material already chosen */
         return m;
-      }, function () { throw new TypeError("Failed to fetch lessons"); }).catch(function (e) { delete matLoading[m.id]; throw e; });
+      }, function () { throw new TypeError("Failed to fetch lessons"); }).catch(function (e) { delete matLoading[key]; throw e; });
     }
-    return matLoading[m.id];
+    return matLoading[key];
   }
+  /* words around the lessons, in the lesson language */
+  var TR = { ceb: {
+    "Ask the group": "Pangutan-a ang grupo", "Think about it": "Hunahunaa kini", "Part": "Bahin",
+    "Read aloud": "Basaha og kusog", "Read together": "Basaha nga dungan", "Read along": "Sunda ang pagbasa",
+    "A prayer you could use": "Usa ka pag-ampo nga pwede nimong gamiton", "Verse to carry this week": "Bersikulo nga dad-on nimo karong semanaha",
+    "Read it aloud together, twice.": "Basaha kini og kusog nga dungan, makaduha.", "Next week’s question": "Pangutana sa sunod semana",
+    "Midweek text": "Mensahe sa tunga-tunga sa semana", "This week’s question": "Pangutana karong semanaha",
+    "Verse of the week": "Bersikulo sa semana", "Lesson": "Leksyon"
+  } };
+  function tr(s) { return (TR[LANG] && TR[LANG][s]) || s; }
   function setMaterial(id) {
     var m = matById(id) || MATS[0];
     MAT = m; LESSONS = m.lessons || []; PHASES = m.phases; TOTAL = LESSONS.length;
@@ -665,7 +688,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function splitRef(x) { var m = /^(.*?\d)\.\s+([A-Z].*)$/.exec(x); return m ? { ref: m[1], note: m[2] } : { ref: x, note: "" }; }
   function readBlock(b, label, student) {
     var vb = vbody(b.x), sr = splitRef(b.x);
-    return '<div class="readwrap"><div class="read"><small>' + label + "</small><span>" + nb(esc(sr.ref)) + "</span></div>" + (vb ? '<div class="vtext">' + vb + "</div>" + (student ? listenBtn() : "") : "") + (sr.note && !student ? '<p class="dir" style="margin:.5rem 0 0">' + esc(sr.note) + "</p>" : "") + "</div>";
+    return '<div class="readwrap"><div class="read"><small>' + label + "</small><span>" + nb(esc(sr.ref)) + "</span></div>" + (vb ? '<div class="vtext">' + vb + "</div>" + (student ? listenBtn() : "") : "") + ((b.tn || sr.note) && !student ? '<p class="dir" style="margin:.5rem 0 0">' + esc(b.tn || sr.note) + "</p>" : "") + "</div>";
   }
   function rid() { return Math.random().toString(36).slice(2, 10); }
   function ago(ts) {
@@ -1381,18 +1404,18 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function block(b) {
     switch (b.t) {
       case "say": return '<p class="say">' + rich(b.x) + "</p>";
-      case "ask": return '<div class="ask"><small>Ask the group</small>' + rich(b.x) + "</div>";
+      case "ask": return '<div class="ask"><small>' + tr("Ask the group") + "</small>" + rich(b.x) + "</div>";
       case "dir": return '<p class="dir">' + rich(b.x) + "</p>";
-      case "h3": return '<h3 class="part"><i>Part ' + b.n + "</i><span>" + rich(b.x) + "</span></h3>";
-      case "read": return readBlock(b, "Read aloud");
-      case "readtog": return readBlock(b, "Read together");
-      case "prayer": return '<div class="prayer"><p class="pi">' + rich(b.i) + '</p><small>A prayer you could use</small><p class="pp">' + rich(b.x) + "</p></div>";
+      case "h3": return '<h3 class="part"><i>' + tr("Part") + " " + b.n + "</i><span>" + rich(b.x) + "</span></h3>";
+      case "read": return readBlock(b, tr("Read aloud"));
+      case "readtog": return readBlock(b, tr("Read together"));
+      case "prayer": return '<div class="prayer"><p class="pi">' + rich(b.i) + "</p><small>" + tr("A prayer you could use") + '</small><p class="pp">' + rich(b.x) + "</p></div>";
       case "qlist": return '<ol class="q">' + b.x.map(function (x) { return "<li>" + rich(x) + "</li>"; }).join("") + "</ol>";
       case "tasks": return '<ul class="bul">' + b.x.map(function (x) { return "<li>" + rich(x) + "</li>"; }).join("") + "</ul>";
       case "ul": return '<ul class="bul">' + b.x.map(function (x) { return "<li>" + rich(x) + "</li>"; }).join("") + "</ul>";
-      case "verse": return '<div class="verse"><small>Verse to carry this week</small><b>' + esc(b.x) + '</b><div class="vv">' + vbody(b.x) + "</div><span>Read it aloud together, twice.</span></div>";
-      case "next": return '<div class="next"><small>Next week&#8217;s question</small><p>' + rich(b.x) + "</p></div>";
-      case "mid": return '<div class="mid"><small>Midweek text</small><p>&#8220;' + rich(b.x) + "&#8221;</p></div>";
+      case "verse": return '<div class="verse"><small>' + tr("Verse to carry this week") + "</small><b>" + esc(b.x) + '</b><div class="vv">' + vbody(b.x) + "</div><span>" + tr("Read it aloud together, twice.") + "</span></div>";
+      case "next": return '<div class="next"><small>' + tr("Next week’s question") + "</small><p>" + rich(b.x) + "</p></div>";
+      case "mid": return '<div class="mid"><small>' + tr("Midweek text") + "</small><p>&#8220;" + rich(b.x) + "&#8221;</p></div>";
       case "celebrate": return '<div class="celebrate">' + rich(b.x) + "</div>";
       case "faq": return '<div class="faq">' + b.x.map(function (f) { return "<details><summary>" + rich(f.q) + '</summary><p class="ans">' + rich(f.a) + "</p></details>"; }).join("") + "</div>";
     }
@@ -1404,8 +1427,8 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   }
   function lessonHead(n, extra) {
     var L = LESSONS[n - 1], p = phaseOf(n);
-    return '<div class="khead"><p class="kick">' + esc(phLabel(p)) + " · Lesson " + n + '</p><h1 class="lh1">' + esc(L.title) + "</h1>" +
-      '<div class="qcard"><small>This week&#8217;s question</small><p>' + esc(L.q) + '</p></div><div class="vchip"><small>Verse of the week</small><span>' + esc(L.v) + "</span></div>" + (extra || "") + "</div>";
+    return '<div class="khead"><p class="kick">' + esc(phLabel(p)) + " · " + tr("Lesson") + " " + n + '</p><h1 class="lh1">' + esc(L.title) + "</h1>" +
+      '<div class="qcard"><small>' + tr("This week’s question") + "</small><p>" + esc(L.q) + '</p></div><div class="vchip"><small>' + tr("Verse of the week") + "</small><span>" + esc(L.v) + "</span></div>" + (extra || "") + "</div>";
   }
   function phaseList(cardFn, openN) {
     return PHASES.map(function (p) {
@@ -1479,10 +1502,10 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   function sBlock(b) {
     switch (b.t) {
       case "say": return '<p class="say">' + rich(b.x) + "</p>";
-      case "ask": return '<div class="ask"><small>Think about it</small>' + rich(b.x) + "</div>";
-      case "h3": return '<h3 class="part"><i>Part ' + b.n + "</i><span>" + rich(b.x) + "</span></h3>";
-      case "read": return readBlock(b, "Read along", true);
-      case "readtog": return readBlock(b, "Read along", true);
+      case "ask": return '<div class="ask"><small>' + tr("Think about it") + "</small>" + rich(b.x) + "</div>";
+      case "h3": return '<h3 class="part"><i>' + tr("Part") + " " + b.n + "</i><span>" + rich(b.x) + "</span></h3>";
+      case "read": return readBlock(b, tr("Read along"), true);
+      case "readtog": return readBlock(b, tr("Read along"), true);
       case "prayer": return block(b);
     }
     return "";
@@ -1615,11 +1638,19 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
         return '<label><input type="radio" name="theme" data-chg="settheme" value="' + o[0] + '"' + (cur === o[0] ? ' checked' : '') + '><span class="sw" style="background:' + o[2] + '"></span>' + o[1] + '</label>';
       }).join("") + '</div></div>';
   }
+  function langCard() {
+    var opts = [["en", "English"], ["ceb", "Bisaya"]];
+    return '<div class="card"><span class="k">Lesson language · Pinulongan sa leksyon</span><div class="themes">' +
+      opts.map(function (o) {
+        return '<label><input type="radio" name="lang" data-chg="setlang" value="' + o[0] + '"' + (LANG === o[0] ? " checked" : "") + "> " + o[1] + "</label>";
+      }).join("") + '</div><p class="small" style="margin:.6rem 0 0">Lessons not yet in Bisaya show in English. Ang mga leksyon nga wala pa sa Bisaya makita sa English.</p></div>';
+  }
   function vStudentMe() {
     var m = S.me, tdone = 0; Object.keys(m.tasks).forEach(function (k) { tdone += taskCount(m, +k); });
     var h = '<div class="hero"><p class="eyebrow">Me</p><h1>' + esc(m.name || "Your profile") + "</h1></div>" + syncNote();
     h += '<div class="stats"><div class="stat"><b>' + m.done.length + "</b><span>Lessons</span></div><div class=\"stat\"><b>" + tdone + "</b><span>Tasks</span></div><div class=\"stat\"><b>" + m.verses.length + "</b><span>Verses</span></div></div>";
     h += '<div class="card"><div class="field"><label class="f" for="nm2">Your name</label><input type="text" id="nm2" data-bind="name" value="' + esc(S.draft.name || m.name) + '" maxlength="40"></div><button class="btn block" type="button" data-act="savename">Save name</button></div>';
+    h += langCard();
     h += themeCard();
     h += reminderCard();
     h += myVerses() + attendanceMine();
@@ -1813,7 +1844,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       '<label class="chk"><input type="checkbox" data-chg="sahead"' + (d.ahead ? " checked" : "") + '> Let students read ahead</label>' +
       '<button class="btn primary block" type="button" data-act="savesettings" style="margin-top:.8rem">Save settings</button></div>' +
       joinCard() + leaderCard() + backupCard() +
-      '<div class="card"><span class="k">See what students see</span><p class="small">Open the student side to look around. Nothing you do there is saved or sent to your class.</p><button class="btn block" type="button" data-go="shome">Open student view</button></div>' + adminCard() + accountCard() + themeCard() + reminderCard();
+      '<div class="card"><span class="k">See what students see</span><p class="small">Open the student side to look around. Nothing you do there is saved or sent to your class.</p><button class="btn block" type="button" data-go="shome">Open student view</button></div>' + adminCard() + accountCard() + langCard() + themeCard() + reminderCard();
   }
   /* only the app admin sees this: new teachers need a one-time invite to start a class */
   function adminCard() {
@@ -2040,6 +2071,16 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       else if (v === "light") { r.setAttribute("data-theme", "light"); store("dc_theme", "light"); }
       else { r.setAttribute("data-theme", v); store("dc_theme", v); }
       syncThemeColor();
+    },
+    setlang: function (t) {
+      var v = t.value === "ceb" ? "ceb" : "en"; if (v === LANG) return;
+      LANG = v; store("dc_lang", v === "en" ? null : v);
+      MATS.forEach(function (m) { delete m.lessons; }); matLoading = {};
+      var m = MAT;
+      loadMat(m.id).then(function () {
+        if (MAT === m) { LESSONS = m.lessons; TOTAL = LESSONS.length; }
+        render(); toast(v === "ceb" ? "Ang mga leksyon karon sa Bisaya." : "Lessons are now in English.");
+      }, function () { toast("Could not load the lessons. Check your connection and try again."); render(); });
     },
     remind: function (t) {
       if (t.checked) {
