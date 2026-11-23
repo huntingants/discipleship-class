@@ -286,6 +286,18 @@ const tests = {
     app.emit("prayers", { new: {}, old: {}, errors: ["Error 401: Unauthorized"] });
     await wait(2000);
     check("own saves and 'Unauthorized' notices cause no refresh", (app.counts.classes || 0) - base === 0, String((app.counts.classes || 0) - base));
+  },
+
+  async "Translations: every translated lesson has the same layout as the English"() {
+    const path = require("path");
+    const { checkFile, listedTranslations } = require("../tools/check-translation");
+    const pairs = listedTranslations();
+    check("index.html lists at least one translation", pairs.length > 0);
+    for (const p of pairs) {
+      const problems = checkFile(p.tr, p.en);
+      check(path.basename(p.tr) + " matches " + path.basename(p.en), !problems.length,
+        problems.slice(0, 3).join("; ") + (problems.length > 3 ? "; and " + (problems.length - 3) + " more (run node tools/check-translation.js)" : ""));
+    }
   }
 };
 
