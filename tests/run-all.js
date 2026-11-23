@@ -64,9 +64,9 @@ const tests = {
     check("lesson 1 shown in Bisaya", /<h1 class="lh1">Asa ka mopuyo sa kahangtoran\?/.test(app.page()));
     check("verse text still shown", (app.page().match(/class="vtext"/g) || []).length > 0);
     check("Bisaya lessons downloaded", app.fetched.includes("data/mat-disciple.ceb.json"), JSON.stringify(app.fetched));
-    const later = start({ server: student({ classes: [klass({ week: 46 })] }), hash: "sl46", local: { dc_lang: "ceb" } });
+    const later = start({ server: student({ classes: [klass({ week: 63 })] }), hash: "sl63", local: { dc_lang: "ceb" } });
     await wait(1500);
-    check("untranslated lesson 46 falls back to English", /<h1 class="lh1">Who I am in Christ/.test(later.page()));
+    check("last lesson 63 shown in Bisaya", /<h1 class="lh1">Pag-adto sa mga nasod/.test(later.page()));
     const t = start({ server: teacher(), hash: "tl1", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("teacher sees Bisaya labels and the reading note", t.page().includes("Pangutan-a ang grupo") && t.page().includes("Maayo kon tulo ang magbasa"));
