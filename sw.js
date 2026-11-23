@@ -1,6 +1,6 @@
 // Keeps the app opening when the connection is poor.
 // Lessons and Bible verses are in data/*.json; each is saved here the first time the app loads it.
-const V = "dc-v18";
+const V = "dc-v19";
 
 // notifications from the class (sent by the "notify" function in Supabase)
 self.addEventListener("push", (e) => {

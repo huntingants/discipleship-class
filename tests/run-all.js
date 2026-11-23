@@ -64,6 +64,7 @@ const tests = {
     check("lesson 1 shown in Bisaya", /<h1 class="lh1">Asa ka mopuyo sa kahangtoran\?/.test(app.page()));
     check("verse text still shown", (app.page().match(/class="vtext"/g) || []).length > 0);
     check("Bisaya lessons downloaded", app.fetched.includes("data/mat-disciple.ceb.json"), JSON.stringify(app.fetched));
+    check("Disciple verses shown in Bisaya", app.page().includes("Ang tawo kausa lang gayod mamatay") && !app.page().includes("Inasmuch as it is appointed"), app.page().slice(0, 300));
     const later = start({ server: student({ classes: [klass({ week: 63 })] }), hash: "sl63", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("last lesson 63 shown in Bisaya", /<h1 class="lh1">Pag-adto sa mga nasod/.test(later.page()));
@@ -71,12 +72,13 @@ const tests = {
     await wait(1500);
     check("OHB lesson 1 shown in Bisaya", /<h1 class="lh1">Kinabuhi human sa kamatayon/.test(ohb.page()), ohb.page().slice(0, 300));
     check("OHB Bisaya lessons downloaded", ohb.fetched.includes("data/mat-ohb.ceb.json"), JSON.stringify(ohb.fetched));
+    check("OHB verses stay in English", ohb.page().includes("Inasmuch as it is appointed") && !ohb.page().includes("Ang tawo kausa lang gayod mamatay"), ohb.page().slice(0, 300));
     const ohbLast = start({ server: student({ classes: [klass({ material: "ohb", week: 48 })] }), hash: "sl48", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("last OHB lesson 48 shown in Bisaya", /<h1 class="lh1">Ngano nga ang uban mapakyas</.test(ohbLast.page()), ohbLast.page().slice(0, 300));
     const prepEn = start({ server: student({ classes: [klass({ material: "prep", week: 1 })] }), hash: "sl1", local: { dc_lang: "ceb" } });
     await wait(1500);
-    check("course without Bisaya falls back to English", /<h1 class="lh1">What is Christianity\?</.test(prepEn.page()) && !prepEn.fetched.some((f) => f.includes(".ceb.")), prepEn.page().slice(0, 300));
+    check("course without Bisaya falls back to English", /<h1 class="lh1">What is Christianity\?</.test(prepEn.page()) && !prepEn.fetched.includes("data/mat-prep.ceb.json"), prepEn.page().slice(0, 300));
     const t = start({ server: teacher(), hash: "tl1", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("teacher sees Bisaya labels and the reading note", t.page().includes("Pangutan-a ang grupo") && t.page().includes("Maayo kon tulo ang magbasa"));

@@ -592,7 +592,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 <div class="sheetbg" id="sheetbg"><div class="sheet" role="dialog" aria-label="Bible passage"><div class="sheet-in" id="sheetin"></div></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script type="application/json" id="materials">[{"id":"disciple","name":"Disciple Series","short":"Disciple","off":0,"desc":"63 weekly lessons in 7 phases, from new life in Christ to leading and going to the nations.","partWord":"Phase","unit":"phase","langs":["ceb"],"phases":[{"n":1,"t":"New Life","d":"The gospel, assurance, prayer to begin, and baptism.","a":1,"b":9},{"n":2,"t":"Daily Walk","d":"Prayer, the Bible, church, giving and growing every day.","a":10,"b":18},{"n":3,"t":"Spirit-Led Life","d":"Knowing the Holy Spirit and being led by Him.","a":19,"b":27},{"n":4,"t":"Lordship, Church and Mission","d":"Following Jesus fully, church life and making disciples.","a":28,"b":36},{"n":5,"t":"Knowing the Bible","d":"Trusting, studying and understanding Scripture.","a":37,"b":45},{"n":6,"t":"Character and Relationships","d":"Identity, the Spirit's fruit, home, conflict, purity, money and rest.","a":46,"b":54},{"n":7,"t":"Mission and Leadership","d":"Gifts, sharing the gospel, leading and going to the nations.","a":55,"b":63}]},{"id":"ohb","name":"OHB Series","short":"OHB","off":1000,"desc":"48 weekly lessons in 4 series: Salvation, Maturity, Discipleship and Victorious Life. The lessons keep the OHB wording.","partWord":"","unit":"series","langs":["ceb"],"phases":[{"n":1,"t":"Salvation Series","d":"Life after death, the gospel, assurance, the new birth, God as Father, and baptism.","a":1,"b":12},{"n":2,"t":"Maturity Series","d":"Prayer, the Word, repentance, faith, giving, the Lord's Day and the Holy Spirit.","a":13,"b":24},{"n":3,"t":"Discipleship Series","d":"Commitment, hearing God, the church, work, serving, blessing others and multiplying.","a":25,"b":36},{"n":4,"t":"Victorious Life Series","d":"Persecution, forgiveness, God's presence, fasting, purity and walking with God.","a":37,"b":48}]},{"id":"prep","name":"Preparatory Lesson","short":"Prep","off":2000,"desc":"3 introductory lessons covering what Christianity is, spiritual growth, and navigating the Bible, before starting the full course.","partWord":"","unit":"","phases":[{"n":1,"t":"Preparatory Lesson","d":"Core beliefs, the Bible, spiritual growth, and what to expect in the course.","a":1,"b":3}]}]</script>
+<script type="application/json" id="materials">[{"id":"disciple","name":"Disciple Series","short":"Disciple","off":0,"desc":"63 weekly lessons in 7 phases, from new life in Christ to leading and going to the nations.","partWord":"Phase","unit":"phase","langs":["ceb"],"vlangs":["ceb"],"phases":[{"n":1,"t":"New Life","d":"The gospel, assurance, prayer to begin, and baptism.","a":1,"b":9},{"n":2,"t":"Daily Walk","d":"Prayer, the Bible, church, giving and growing every day.","a":10,"b":18},{"n":3,"t":"Spirit-Led Life","d":"Knowing the Holy Spirit and being led by Him.","a":19,"b":27},{"n":4,"t":"Lordship, Church and Mission","d":"Following Jesus fully, church life and making disciples.","a":28,"b":36},{"n":5,"t":"Knowing the Bible","d":"Trusting, studying and understanding Scripture.","a":37,"b":45},{"n":6,"t":"Character and Relationships","d":"Identity, the Spirit's fruit, home, conflict, purity, money and rest.","a":46,"b":54},{"n":7,"t":"Mission and Leadership","d":"Gifts, sharing the gospel, leading and going to the nations.","a":55,"b":63}]},{"id":"ohb","name":"OHB Series","short":"OHB","off":1000,"desc":"48 weekly lessons in 4 series: Salvation, Maturity, Discipleship and Victorious Life. The lessons keep the OHB wording.","partWord":"","unit":"series","langs":["ceb"],"phases":[{"n":1,"t":"Salvation Series","d":"Life after death, the gospel, assurance, the new birth, God as Father, and baptism.","a":1,"b":12},{"n":2,"t":"Maturity Series","d":"Prayer, the Word, repentance, faith, giving, the Lord's Day and the Holy Spirit.","a":13,"b":24},{"n":3,"t":"Discipleship Series","d":"Commitment, hearing God, the church, work, serving, blessing others and multiplying.","a":25,"b":36},{"n":4,"t":"Victorious Life Series","d":"Persecution, forgiveness, God's presence, fasting, purity and walking with God.","a":37,"b":48}]},{"id":"prep","name":"Preparatory Lesson","short":"Prep","off":2000,"desc":"3 introductory lessons covering what Christianity is, spiritual growth, and navigating the Bible, before starting the full course.","partWord":"","unit":"","phases":[{"n":1,"t":"Preparatory Lesson","d":"Core beliefs, the Bible, spiritual growth, and what to expect in the course.","a":1,"b":3}]}]</script>
 <script>
 (function () {
   "use strict";
@@ -663,7 +663,21 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   try { var lastMat = localStorage.getItem("dc_lastmat"); if (lastMat && matById(lastMat)) loadMat(lastMat).catch(function () {}); } catch (e) {}
   /* Bible verse text loads in the background; references show as plain text until it arrives */
   var VERSES = {}, RMAP = {}, bibleTry = 0, bibleStarted = false;
-  function startBible() { if (!bibleStarted) { bibleStarted = true; loadBible(); } }
+  /* Bisaya verse text (Biblica Open Ang Pulong sa Dios, CC BY-SA 4.0) for courses that list "ceb" in "vlangs".
+     It is loaded only when Bisaya is chosen; any verse it lacks shows in English. */
+  var VCEB = {}, vcebState = "";
+  function startBible() { if (!bibleStarted) { bibleStarted = true; loadBible(); } loadVceb(); }
+  function loadVceb() {
+    if (LANG !== "ceb" || vcebState) return;
+    vcebState = "loading";
+    fetch("data/bible.ceb.json").then(function (r) { if (!r.ok) throw new Error("bible"); return r.json(); }).then(function (b) {
+      VCEB = b.V || {}; vcebState = "done"; requestRender();
+    }, function () { vcebState = ""; });
+  }
+  function vceb(ref) { return LANG === "ceb" && (MAT.vlangs || []).indexOf("ceb") >= 0 && VCEB[ref] ? VCEB[ref] : null; }
+  function vget(ref) { return vceb(ref) || VERSES[ref]; }
+  function vcredit(ref) { return vceb(ref) ? "Biblica® Open Ang Pulong sa Dios™ © 2009, 2010, 2014, 2024 Biblica, Inc. CC BY-SA 4.0." : "World English Bible, public domain."; }
+  function vspeak() { return LANG === "ceb" && (MAT.vlangs || []).indexOf("ceb") >= 0 ? "fil-PH" : "en-US"; }
   function loadBible() {
     fetch("data/bible.json").then(function (r) { if (!r.ok) throw new Error("bible"); return r.json(); }).then(function (b) {
       VERSES = b.V || {}; RMAP = b.R || {}; requestRender();
@@ -689,7 +703,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     return out + nb(s.slice(last));
   }
   function vbody(ref) {
-    var g = VERSES[ref]; if (!g) return "";
+    var g = vget(ref); if (!g) return "";
     return g.map(function (grp) {
       var lastC = 0;
       return '<p class="vt">' + (g.length > 1 ? '<span class="vb">' + esc(grp[0]) + "</span> " : "") + grp[1].map(function (x, i) {
@@ -755,7 +769,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* crash reports: send a short note about unexpected errors so the app admin can see them.
      No names, notes or journal text are sent: only the error message, where it happened and the browser. */
-  var APP_VER = "dc-v18", errSent = {}, errCount = 0;
+  var APP_VER = "dc-v19", errSent = {}, errCount = 0;
   function reportError(msg, src) {
     try {
       msg = String(msg || "").slice(0, 500);
@@ -1692,7 +1706,8 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     return '<div class="card"><span class="k">Lesson language · Pinulongan sa leksyon</span><div class="themes">' +
       opts.map(function (o) {
         return '<label><input type="radio" name="lang" data-chg="setlang" value="' + o[0] + '"' + (LANG === o[0] ? " checked" : "") + "> " + o[1] + "</label>";
-      }).join("") + '</div><p class="small" style="margin:.6rem 0 0">Lessons not yet in Bisaya show in English. Ang mga leksyon nga wala pa sa Bisaya makita sa English.</p></div>';
+      }).join("") + '</div><p class="small" style="margin:.6rem 0 0">Lessons not yet in Bisaya show in English. Ang mga leksyon nga wala pa sa Bisaya makita sa English.</p>' +
+        '<p class="small" style="margin:.6rem 0 0">Bible verses in the Disciple Series, in Bisaya: Biblica® Open Ang Pulong sa Dios™. Katungod sa pagmantala © 2009, 2010, 2014, 2024 Biblica, Inc. Biblica® Open Cebuano Contemporary Bible™, Copyright © 2009, 2010, 2014, 2024 by Biblica, Inc. “Biblica” is a trademark registered in the United States Patent and Trademark Office by Biblica, Inc. Used with permission. Licensed under CC BY-SA 4.0 (creativecommons.org/licenses/by-sa/4.0). The original Work by its copyright holders is available for free at www.biblica.com and open.bible. Selected verses only, text unchanged; where verses are joined in this translation they show as one, numbered with their range. English verses: World English Bible, public domain.</p></div>';
   }
   function vStudentMe() {
     var m = S.me, tdone = 0; Object.keys(m.tasks).forEach(function (k) { tdone += taskCount(m, +k); });
@@ -1987,7 +2002,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
   var ACT = {
     vref: function (t) {
       var ref = t.getAttribute("data-ref");
-      document.getElementById("sheetin").innerHTML = "<h3><span>" + nb(esc(ref)) + '</span><span class="hbtns">' + listenBtn() + '<button type="button" class="btn sm" data-act="vclose">Close</button></span></h3>' + vbody(ref) + '<p class="small" style="margin:.8rem 0 0">World English Bible, public domain.</p>';
+      document.getElementById("sheetin").innerHTML = "<h3><span>" + nb(esc(ref)) + '</span><span class="hbtns">' + listenBtn() + '<button type="button" class="btn sm" data-act="vclose">Close</button></span></h3>' + vbody(ref) + '<p class="small" style="margin:.8rem 0 0">' + esc(vcredit(ref)) + "</p>";
       document.getElementById("sheetbg").classList.add("on");
     },
     vclose: function () { stopSpeak(); document.getElementById("sheetbg").classList.remove("on"); },
@@ -2134,7 +2149,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     },
     setlang: function (t) {
       var v = t.value === "ceb" ? "ceb" : "en"; if (v === LANG) return;
-      LANG = v; store("dc_lang", v === "en" ? null : v);
+      LANG = v; store("dc_lang", v === "en" ? null : v); loadVceb();
       MATS.forEach(function (m) { delete m.lessons; }); matLoading = {};
       var m = MAT;
       loadMat(m.id).then(function () {
@@ -2431,7 +2446,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       var box = t.closest(".readwrap") || document.getElementById("sheetin"); if (!box) return;
       var ref = box.querySelector(".read span, h3 > span"), parts = [ref ? ref.textContent : ""];
       box.querySelectorAll(".vt").forEach(function (p) { var c = p.cloneNode(true); c.querySelectorAll("sup,.vb").forEach(function (x) { x.remove(); }); parts.push(c.textContent); });
-      var u = new SpeechSynthesisUtterance(parts.join(". ")); u.lang = "en-US"; u.rate = 0.92;
+      var u = new SpeechSynthesisUtterance(parts.join(". ")); u.lang = vspeak(); u.rate = 0.92;
       u.onend = u.onerror = function () { if (speaking === t) stopSpeak(); };
       t.textContent = "Stop"; speaking = t; speechSynthesis.speak(u);
       /* Safety timeout: some browsers never fire onend/onerror. 90 seconds covers long passages. */
@@ -2517,7 +2532,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
 
   /* memory verse */
   function verseWords(ref) {
-    var g = VERSES[ref], out = [], total = 0;
+    var g = vget(ref), out = [], total = 0;
     if (!g) return out;
     g.forEach(function (grp) { total += grp[1].length; });
     g.forEach(function (grp) {
@@ -2571,7 +2586,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
     if (window.speechSynthesis) h += '<div class="row"><button class="btn ghost" type="button" data-act="vplisten" data-say="' + esc(say) + '">Listen</button></div>';
     h += '<button class="btn gold block" type="button" data-act="verse" data-n="' + n + '">' + (know ? "✓ I know this verse. Tap to undo" : "I can say it from memory") + "</button>";
     h += '<button class="btn block" type="button" data-go="' + (n === weekN() ? "shome" : "sme") + '" style="margin-top:.6rem">Back</button>';
-    h += '<p class="small" style="margin-top:1rem">World English Bible, public domain. Say it out loud, twice a day. Saying it is how it stays.</p>';
+    h += '<p class="small" style="margin-top:1rem">' + esc(vcredit(ref)) + " Say it out loud, twice a day. Saying it is how it stays.</p>";
     return h;
   }
 
@@ -2612,7 +2627,7 @@ body.lifted .toast { bottom: calc(5rem + var(--lift, 0px) + env(safe-area-inset-
       if (!window.speechSynthesis) return;
       if (speaking === t) { stopSpeak(); return; }
       stopSpeak();
-      var u = new SpeechSynthesisUtterance(t.getAttribute("data-say") || ""); u.lang = "en-US"; u.rate = 0.9;
+      var u = new SpeechSynthesisUtterance(t.getAttribute("data-say") || ""); u.lang = vspeak(); u.rate = 0.9;
       u.onend = u.onerror = function () { if (speaking === t) stopSpeak(); };
       t.textContent = "Stop"; speaking = t; speechSynthesis.speak(u);
       /* Safety timeout: some browsers never fire onend/onerror. */

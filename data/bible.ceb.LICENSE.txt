@@ -1,0 +1,20 @@
+data/bible.ceb.json — Bisaya (Cebuano) Bible verses used in the Disciple Series
+
+Biblica® Open Ang Pulong sa Dios™
+Katungod sa pagmantala © 2009, 2010, 2014, 2024 Biblica, Inc.
+Biblica® Open Cebuano Contemporary Bible™
+Copyright © 2009, 2010, 2014, 2024 by Biblica, Inc.
+
+"Biblica" is a trademark registered in the United States Patent and Trademark Office by Biblica, Inc. Used with permission.
+
+This work is made available under the Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0): https://creativecommons.org/licenses/by-sa/4.0
+
+The original Work by its copyright holders is available for free at www.biblica.com and open.bible.
+Source used here: https://ebible.org/find/details.php?id=cebocb (cebocb_vpl.zip, downloaded 2026-11-23).
+
+Changes made: only the verses the Disciple Series shows are included, grouped by the
+reference keys used in data/bible.json. The verse text is unchanged. Where this
+translation joins verses (for example Ephesians 2:8-9 as one verse), the joined text
+appears once, numbered with its range (for example "8-9").
+
+This file, as a selection of the work above, is shared under the same CC BY-SA 4.0 licence.
