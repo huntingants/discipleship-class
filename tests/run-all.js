@@ -72,13 +72,14 @@ const tests = {
     await wait(1500);
     check("OHB lesson 1 shown in Bisaya", /<h1 class="lh1">Kinabuhi human sa kamatayon/.test(ohb.page()), ohb.page().slice(0, 300));
     check("OHB Bisaya lessons downloaded", ohb.fetched.includes("data/mat-ohb.ceb.json"), JSON.stringify(ohb.fetched));
-    check("OHB verses stay in English", ohb.page().includes("Inasmuch as it is appointed") && !ohb.page().includes("Ang tawo kausa lang gayod mamatay"), ohb.page().slice(0, 300));
+    check("OHB verses shown in Bisaya", ohb.page().includes("Ang tawo kausa lang gayod mamatay") && !ohb.page().includes("Inasmuch as it is appointed"), ohb.page().slice(0, 300));
     const ohbLast = start({ server: student({ classes: [klass({ material: "ohb", week: 48 })] }), hash: "sl48", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("last OHB lesson 48 shown in Bisaya", /<h1 class="lh1">Ngano nga ang uban mapakyas</.test(ohbLast.page()), ohbLast.page().slice(0, 300));
     const prep = start({ server: student({ classes: [klass({ material: "prep", week: 1 })] }), hash: "sl1", local: { dc_lang: "ceb" } });
     await wait(1500);
     check("Preparatory lesson 1 shown in Bisaya", /<h1 class="lh1">Unsa ang Kristiyanismo\?</.test(prep.page()) && prep.fetched.includes("data/mat-prep.ceb.json"), prep.page().slice(0, 300));
+    check("Preparatory verses stay in English", prep.page().includes("for all have sinned, and fall short"), prep.page().slice(0, 300));
     const prepEn = start({ server: student({ classes: [klass({ material: "prep", week: 1 })] }), hash: "sl1", local: { dc_lang: "ceb" }, blockFetch: /mat-prep\.ceb/ });
     await wait(1500);
     check("lessons fall back to English when the Bisaya file cannot load", /<h1 class="lh1">What is Christianity\?</.test(prepEn.page()), prepEn.page().slice(0, 300));
